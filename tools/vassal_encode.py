@@ -1,0 +1,207 @@
+# -*- coding: utf-8 -*-
+"""Encodage des pieces VASSAL.
+
+Portage fidele de VASSAL.tools.SequenceEncoder et des methodes myGetType()/
+myGetState() des traits utilises. Les regles ont ete verifiees directement dans
+les sources de VASSAL (vassal-app/src/main/java/VASSAL).
+
+Point critique : Decorator.getType() fait
+    new SequenceEncoder(myGetType(), '\t').append(piece.getType())
+ce qui **echappe** les tabulations deja presentes dans la chaine interieure.
+Sans cet echappement, VASSAL ne sait plus decouper la chaine et perd tous les
+traits au-dela du deuxieme, ainsi que l'image et le nom de la piece.
+"""
+
+CTRL = 130  # InputEvent.CTRL_MASK | CTRL_DOWN_MASK, tel que VASSAL le serialise
+
+
+class SequenceEncoder:
+    """Equivalent de VASSAL.tools.SequenceEncoder."""
+
+    def __init__(self, delimiter, first=None):
+        self.delim = delimiter
+        self.buf = None
+        if first is not None:
+            self.append(first)
+
+    def _escape(self, s):
+        return ''.join('\\' + c if c == self.delim else c for c in s)
+
+    def append(self, value):
+        if value is None:
+            value = ''
+        elif value is True:
+            value = 'true'
+        elif value is False:
+            value = 'false'
+        else:
+            value = str(value)
+
+        if self.buf is None:
+            self.buf = []
+        else:
+            self.buf.append(self.delim)
+
+        if value == '':
+            return self
+        # VASSAL protege les chaines commencant par \ ou entierement quotees
+        if value[0] == '\\' or (value[0] == "'" and value[-1] == "'"):
+            self.buf.append("'" + self._escape(value) + "'")
+        else:
+            self.buf.append(self._escape(value))
+        return self
+
+    def value(self):
+        return '' if self.buf is None else ''.join(self.buf)
+
+
+def seq(delimiter, *values):
+    e = SequenceEncoder(delimiter)
+    for v in values:
+        e.append(v)
+    return e.value()
+
+
+def string_array(items):
+    """StringArrayConfigurer.arrayToString : elements joints par ',' echappes."""
+    if not items:
+        return ''
+    return seq(',', *items)
+
+
+def keystroke(code, modifiers=CTRL):
+    """HotKeyConfigurer.encode : '<keycode>,<modifiers>'."""
+    return '%d,%d' % (code, modifiers)
+
+
+# --- Traits -----------------------------------------------------------------
+
+class Trait:
+    """Un trait (Decorator) : une paire type/etat."""
+
+    def __init__(self, type_string, state_string=''):
+        self.type = type_string
+        self.state = state_string
+
+
+def basic_piece(image, name, gpid):
+    """BasicPiece : le coeur de la piece. type 'piece;<clone>;<delete>;<img>;<nom>'."""
+    return Trait(
+        'piece;' + seq(';', '', '', image or '', name or ''),
+        seq(';', 'null', 0, 0, gpid, 0),
+    )
+
+
+def delete(command='Supprimer', key=keystroke(68)):        # Ctrl+D
+    return Trait('delete;' + seq(';', command, key, ''), '')
+
+
+def clone(command='Dupliquer', key=keystroke(75)):         # Ctrl+K
+    return Trait('clone;' + seq(';', command, key, ''), '')
+
+
+def marker(keys, values):
+    """Marker : type 'mark;<cles>' etat '<valeurs>' (delimiteur ',')."""
+    return Trait('mark;' + string_array(keys), string_array(values))
+
+
+def layer(images, level_names, up_command, up_key, layer_name='Etat',
+          description='', start_level=1):
+    """Embellishment (« Couche ») version 2 : 33 champs, dans l'ordre exact
+    de Embellishment.myGetType()."""
+    fields = [
+        '',            # 1  activateCommand (couche toujours active)
+        CTRL,          # 2  activateModifiers
+        '',            # 3  activateKey
+        up_command,    # 4  upCommand
+        CTRL,          # 5  upModifiers
+        '',            # 6  upKey
+        '',            # 7  downCommand
+        CTRL,          # 8  downModifiers
+        '',            # 9  downKey
+        '',            # 10 resetCommand
+        '',            # 11 resetKey
+        '1',           # 12 resetLevel
+        False,         # 13 drawUnderneathWhenSelected
+        0,             # 14 xOff
+        0,             # 15 yOff
+        string_array(images),       # 16 imageName[]
+        string_array(level_names),  # 17 commonName[]
+        True,          # 18 loopLevels
+        layer_name,    # 19 name
+        '',            # 20 rndKey
+        '',            # 21 rndText
+        False,         # 22 followProperty
+        '',            # 23 propertyName
+        1,             # 24 firstLevelValue
+        1,             # 25 version (encodage moderne)
+        True,          # 26 alwaysActive
+        '',            # 27 activateKeyStroke
+        up_key,        # 28 increaseKeyStroke
+        '',            # 29 decreaseKeyStroke
+        description,   # 30 description
+        '1.0',         # 31 scale
+        '',            # 32 onlyPropertyName
+        'true',        # 33 onlyPropertyState
+    ]
+    return Trait('emb2;' + seq(';', *fields), str(start_level))
+
+
+def build_piece(traits):
+    """Assemble la chaine d'un PieceSlot : '+/null/<TYPE>/<ETAT>'.
+
+    traits : du plus externe au plus interne, BasicPiece en dernier.
+    Chaque niveau reencode le niveau interieur, ce qui echappe ses tabulations.
+    """
+    type_string = traits[-1].type
+    state_string = traits[-1].state
+    for t in reversed(traits[:-1]):
+        type_string = seq('\t', t.type, type_string)
+        state_string = seq('\t', t.state, state_string)
+    return '+/' + seq('/', 'null', type_string, state_string)
+
+
+def dynamic_property(key, commands, value='0', numeric=True,
+                     min_value=0, max_value=999999, wrap=False, description=''):
+    """DynamicProperty : une valeur numerique portee par la piece.
+
+    commands : liste de (libelle, keystroke, changer) ou changer vaut
+      ('I', increment) pour ajouter, ('P', valeur) pour fixer,
+      ('R', invite) pour demander la valeur au joueur.
+    """
+    constraints = seq(',', numeric, min_value, max_value, wrap)
+    encoded = []
+    for label, key_stroke, changer in commands:
+        encoded.append(seq(':', label, key_stroke, seq(',', *changer)))
+    return Trait(
+        'PROP;' + seq(';', key, constraints, seq(',', *encoded), description),
+        str(value),
+    )
+
+
+def labeler(text, font_size=26, fg='0,0,0', bg='',
+            v_pos='c', h_pos='c', v_off=0, h_off=0,
+            font_family='Dialog', font_style=1, description=''):
+    """Labeler (« Etiquette texte »). Le texte est evalue comme un format :
+    « $Montant$ » affiche donc la valeur de la propriete Montant."""
+    fields = [
+        '',            # 1  labelKey (pas de commande d'edition)
+        '',            # 2  menuCommand
+        font_size,     # 3  taille
+        bg,            # 4  fond
+        fg,            # 5  texte
+        v_pos,         # 6  position verticale
+        v_off,         # 7  decalage vertical
+        h_pos,         # 8  position horizontale
+        h_off,         # 9  decalage horizontal
+        'c',           # 10 justification verticale
+        'c',           # 11 justification horizontale
+        '$pieceName$', # 12 format du nom
+        font_family,   # 13 police
+        font_style,    # 14 style
+        0,             # 15 rotation
+        '',            # 16 propriete exposee
+        description,   # 17 description
+        False,         # 18 toujours utiliser le format
+    ]
+    return Trait('label;' + seq(';', *fields), text)
