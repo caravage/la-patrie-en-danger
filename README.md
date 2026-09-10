@@ -68,6 +68,43 @@ assets/                  images et PDF prêts à l'emploi, mise en place relevé
 dist/                    le module
 ```
 
+## Version 2 : suivis, non-suppression, notes secrètes, anglais
+
+Corrections et ajouts demandés après relecture du premier module :
+
+- **Bug corrigé — les 2 dés (2d6).** Le message n'affichait que le total
+  (« 2d6 = 9 »), donnant l'impression qu'un seul dé avait été lancé alors que
+  les deux l'étaient bien. Le format montre maintenant le détail
+  (« 2d6 = 4 + 5 = 9 »).
+- **Note secrète sur le plateau.** Remplace la fenêtre Notes (retirée) par un
+  pion « Secret Note » : `Hideable` (Ctrl+H masque/révèle, visible du seul
+  camp qui l'a masqué) + `Labeler` éditable (clic droit « Edit Text »).
+  Validé par test direct : masqué après un Ctrl+H, revisible après le second.
+- **Suivi en 1 clic + journal** pour les 4 pistes verticales (Économie,
+  Clergé, Coalition, Commune) et les 7 marqueurs de Fame : compteur
+  `DynamicProperty` borné 1–20, +1/+5/valeur directe, et un `ReportState`
+  qui écrit « Nom : valeur » dans le journal à chaque changement — validé par
+  simulation de touches (4 → 5 → 6 → 7, plafonne bien à 20).
+- **Non-suppression.** Les 11 pièces ci-dessus et les 31 personnalités n'ont
+  plus de trait Delete.
+- **Menu contextuel des personnalités : Arrest / Guillotine.** Deux
+  `SendToLocation` qui envoient la pièce sur les encarts « Prison du Temple »
+  (§3.2.3.2) et « Madame Guillotine » (§3.2.3.3) du plateau — validé par test
+  direct (la pièce se déplace bien aux coordonnées exactes).
+- **Assemblée nationale : députés dissimulés dans la même pile que leur
+  hôte**, mais en dessous (donc visuellement séparés) plutôt que dans des
+  colonnes séparées — validé sur l'ordre réel des pièces dans le fichier
+  généré.
+- **Barre d'outils** : Notes retirée, Save Text et Recenter retirés. Ordre
+  confirmé dans le XML généré : Side, Pieces, 1d6, 2d6, Inventory, Charts,
+  puis le plateau (dont Save Image est l'unique bouton restant) en dernier.
+- **Infobulle au survol** : zoom porté à 3× (au lieu de 1,5×, probablement
+  trop discret) et affichage du nom de la pièce activé.
+- **Interface entièrement en anglais** (boutons, onglets, propriétés,
+  entrées de palette, mise en place, menu Help), à l'exception des six noms
+  de courants et « assignat », qui sont le vocabulaire du jeu lui-même
+  (utilisé tel quel dans les règles anglaises).
+
 ## Note technique
 
 `tools/vassal_encode.py` reproduit fidèlement `VASSAL.tools.SequenceEncoder`.

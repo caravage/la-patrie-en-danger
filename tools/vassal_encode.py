@@ -181,12 +181,15 @@ def dynamic_property(key, commands, value='0', numeric=True,
 
 def labeler(text, font_size=26, fg='0,0,0', bg='',
             v_pos='c', h_pos='c', v_off=0, h_off=0,
-            font_family='Dialog', font_style=1, description=''):
+            font_family='Dialog', font_style=1, description='',
+            label_key='', menu_command=''):
     """Labeler (« Etiquette texte »). Le texte est evalue comme un format :
-    « $Montant$ » affiche donc la valeur de la propriete Montant."""
+    « $Montant$ » affiche donc la valeur de la propriete Montant.
+    Passer label_key/menu_command pour une etiquette editable par le joueur
+    (menu contextuel), sinon l'etiquette est en lecture seule."""
     fields = [
-        '',            # 1  labelKey (pas de commande d'edition)
-        '',            # 2  menuCommand
+        label_key,     # 1  labelKey (commande d'edition, vide = lecture seule)
+        menu_command,  # 2  menuCommand
         font_size,     # 3  taille
         bg,            # 4  fond
         fg,            # 5  texte
@@ -205,3 +208,44 @@ def labeler(text, font_size=26, fg='0,0,0', bg='',
         False,         # 18 toujours utiliser le format
     ]
     return Trait('label;' + seq(';', *fields), text)
+
+
+def report_state(keys, report_format, description=''):
+    """ReportState : envoie un message dans le journal quand l'une des
+    touches de `keys` (liste de keystrokes) est actionnee sur la piece.
+    Verifie par decodage reel : le trait traite d'abord les effets des
+    traits interieurs (ex. DynamicProperty), donc `report_format` peut
+    lire la valeur A JOUR (ex. « $PieceName$: $Value$ »)."""
+    fields = [
+        seq(',', *keys),  # 1 touches surveillees
+        report_format,    # 2 format du message
+        '',                # 3 touches de cycle descendant
+        '',                # 4 formats de cycle descendant
+        description,       # 5 description
+        False,              # 6 ne pas supprimer si aucun changement
+    ]
+    return Trait('report;' + seq(';', *fields), '')
+
+
+def hideable(hide_key, command='Hide/Reveal', bg='0,0,0', access='side:',
+             transparency=0.5, description=''):
+    """Hideable (« Piece masquee ») : une meme touche masque puis revele la
+    piece. access='side:' restreint la visibilite au camp qui l'a masquee
+    (VASSAL.configure.PieceAccessConfigurer). Etat: 'null' = visible de
+    tous ; sinon le nom du camp qui la masque."""
+    fields = [
+        hide_key, command, bg, access, transparency, description, False,
+    ]
+    return Trait('hide;' + seq(';', *fields), 'null')
+
+
+def send_to_location(command, key, x, y, map_name, board_name,
+                     back_command='', back_key='', description=''):
+    """SendToLocation : deplace la piece a des coordonnees fixes du plateau
+    (destination 'L' = coordonnees directes, verifie contre le code source)."""
+    fields = [
+        command, key, map_name, board_name, str(x), str(y),
+        back_command, back_key, '', '', 0, 0, description,
+        'L', '', '', '', '',
+    ]
+    return Trait('sendto;' + seq(';', *fields), '')

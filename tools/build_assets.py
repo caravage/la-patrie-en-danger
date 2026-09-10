@@ -170,6 +170,28 @@ def player_zone_setup(board_h, board_w):
     return entries
 
 
+def render_note_card():
+    """Genere l'image du pion « Secret Note » (piece masquable a texte libre)."""
+    from PIL import ImageFont
+    W, H = 220, 150
+    im = Image.new('RGB', (W, H), (245, 238, 220))
+    d = ImageDraw.Draw(im)
+    d.rectangle([2, 2, W - 3, H - 3], outline=(120, 100, 70), width=3)
+    d.rectangle([8, 8, W - 9, H - 9], outline=(170, 150, 110), width=1)
+    try:
+        font = ImageFont.truetype(
+            '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf', 15)
+    except Exception:
+        font = ImageFont.load_default()
+    text = 'Secret Note'
+    bbox = d.textbbox((0, 0), text, font=font)
+    d.text(((W - (bbox[2] - bbox[0])) // 2,
+            (H - (bbox[3] - bbox[1])) // 2 - bbox[1]), text,
+           fill=(110, 90, 60), font=font)
+    im.save(os.path.join(IMG, 'note_blank.png'), optimize=True)
+    return [('note_blank.png', im.size)]
+
+
 def render_charts():
     """Convertit les tableaux courts en images pour la fenetre « Aides de jeu »."""
     import pymupdf
@@ -273,6 +295,7 @@ def main(ttsmod, countersheet=None):
         if countersheet:
             written.extend(extract_deputy_counters(countersheet))
         written.extend(render_charts())
+        written.extend(render_note_card())
 
         setup = {'board': extract_setup(ttsmod, index),
                  'zones': player_zone_setup(C.BOARD_PX[1], C.BOARD_PX[0])}

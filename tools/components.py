@@ -6,6 +6,12 @@ contre les regles anglaises (rules_en.pdf) : §3.1 (pions), §4.2 a §4.7 (mise 
 place), §7.3.2 (changement de courant).
 
 Les index renvoient a tools/tts_assets.py (TTS_IMAGES).
+
+Convention de langue : l'interface VASSAL (boutons, onglets, menus, noms de
+pieces) est en anglais. Les six noms de courants et « assignat » restent tels
+que les regles anglaises elles-memes les utilisent (ex. §2.3 « Marais »,
+§2.5 « Montagne (Mountain) ») : ce sont des termes du jeu, pas des elements
+d'interface a traduire.
 """
 
 # Ordre de placement a table, de gauche a droite (regles §4.2)
@@ -83,60 +89,96 @@ PERSONALITIES = [
     ('charette',        'Charette',         'Royaliste', 36, []),
 ]
 
+# Destinations sur le plateau pour les commandes "Arrest" / "Guillotine" du
+# menu contextuel des personnalites (cf. §3.2.3.2 et §3.2.3.3), reperees sur
+# les encarts illustres du plateau.
+PRISON_XY = (3160, 1382)     # encart "Prison du Temple"
+GUILLOTINE_XY = (3160, 1856)  # encart "Madame Guillotine"
+
 # --- Autres pions : (fichier, libelle, categorie, courant, index) -----------
 PIECES = [
     # Marqueurs de controle regional : fournis en nombre illimite
-    ('marqueur_feuillant',    'Controle Feuillant',    'controle', 'Feuillant',    2),
-    ('marqueur_gironde',      'Controle Gironde',      'controle', 'Gironde',      5),
-    ('marqueur_montagne',     'Controle Montagne',     'controle', 'Montagne',     8),
-    ('marqueur_sansculotte',  'Controle Sans-Culotte', 'controle', 'Sans-Culotte', 9),
-    ('marqueur_marais',       'Controle Marais',       'controle', 'Marais',       3),
-    ('marqueur_royaliste',    'Controle Royaliste',    'controle', 'Royaliste',    4),
-    ('coalition_controle',    'Controle Coalition',    'controle', None,          47),
-    ('revolte',               'Revolte',               'controle', None,          28),
-
+    ('marqueur_feuillant',    'Feuillant Control',    'controle', 'Feuillant',    2),
+    ('marqueur_gironde',      'Gironde Control',      'controle', 'Gironde',      5),
+    ('marqueur_montagne',     'Montagne Control',     'controle', 'Montagne',     8),
+    ('marqueur_sansculotte',  'Sans-Culotte Control', 'controle', 'Sans-Culotte', 9),
+    ('marqueur_marais',       'Marais Control',       'controle', 'Marais',       3),
+    ('marqueur_royaliste',    'Royaliste Control',    'controle', 'Royaliste',    4),
+    ('coalition_controle',    'Coalition Control',    'controle', None,          47),
+    ('revolte',               'Revolt',               'controle', None,          28),
 
     # Armees francaises
-    ('armee_francaise',       'Armee (volontaires)',   'armee', None, 1),
-    ('armee_lille',           'Armee de Lille',        'armee', None, 64),
-    ('armee_metz',            'Armee de Metz',         'armee', None, 62),
-    ('armee_strasbourg',      'Armee de Strasbourg',   'armee', None, 61),
-    ('armee_marseille',       'Armee de Marseille',    'armee', None, 63),
-    ('commune',               'Commune de Paris',      'armee', None, 76),
+    ('armee_francaise',       'Army (Volunteers)',      'armee', None, 1),
+    ('armee_lille',           'Lille Army',             'armee', None, 64),
+    ('armee_metz',            'Metz Army',              'armee', None, 62),
+    ('armee_strasbourg',      'Strasbourg Army',        'armee', None, 61),
+    ('armee_marseille',       'Marseille Army',         'armee', None, 63),
+    ('commune',               'Commune of Paris (Army)', 'armee', None, 76),
     # Armees vendeennes
-    ('armee_du_centre',       'Armee du Centre',       'armee', None, 71),
-    ('armee_catholique',      'Armee catholique et royale', 'armee', None, 72),
-    ('armee_pays_de_retz',    'Armee du Pays de Retz', 'armee', None, 73),
+    ('armee_du_centre',       'Army of the Centre',           'armee', None, 71),
+    ('armee_catholique',      'Catholic and Royal Army',      'armee', None, 72),
+    ('armee_pays_de_retz',    'Army of Pays de Retz',         'armee', None, 73),
     # Coalition
-    ('brunswick',             'Brunswick (Prussiens)', 'armee', None, 68),
-    ('cobourg',               'Cobourg (Autrichiens)', 'armee', None, 69),
-    ('wurmser',               'Wurmser (Autrichiens)', 'armee', None, 74),
-    ('york',                  'York (Anglais)',        'armee', None, 75),
-    ('flotte_anglaise',       'La Flotte (Anglais)',   'armee', None, 12),
-    ('armee_espagnole_1',     'Armee espagnole 1',     'armee', None, 66),
-    ('armee_espagnole_2',     'Armee espagnole 2',     'armee', None, 67),
-    ('armee_sarde',           'Armee sarde',           'armee', None, 65),
-    ('quiberon',              'Quiberon (Emigres)',    'armee', None, 70),
+    ('brunswick',             'Brunswick (Prussians)',  'armee', None, 68),
+    ('cobourg',               'Cobourg (Austrians)',    'armee', None, 69),
+    ('wurmser',               'Wurmser (Austrians)',    'armee', None, 74),
+    ('york',                  'York (English)',         'armee', None, 75),
+    ('flotte_anglaise',       'The Fleet (English)',    'armee', None, 12),
+    ('armee_espagnole_1',     'Spanish Army 1',         'armee', None, 66),
+    ('armee_espagnole_2',     'Spanish Army 2',         'armee', None, 67),
+    ('armee_sarde',           'Sardinian Army',         'armee', None, 65),
+    ('quiberon',              'Quiberon (Emigrants)',   'armee', None, 70),
 
-    # Marqueurs de piste
-    ('tour',                  'Tour',                  'piste', None, 48),
-    ('economie',              'Economie',              'piste', None, 50),
-    ('clerge',                'Clerge refractaire',    'piste', None, 51),
-    ('coalition_piste',       'Armees coalisees',      'piste', None, 52),
-    ('commune_piste',         'Commune de Paris (piste)', 'piste', None, 49),
-    ('regime_politique',      'Regime politique',      'piste', None, 53),
-    ('elections',             'Elections',             'piste', None, 83),
-    ('renommee_gouvernement', 'Renommee - Gouvernement', 'piste', None,          54),
-    ('renommee_feuillant',    'Renommee - Feuillant',    'piste', 'Feuillant',    59),
-    ('renommee_gironde',      'Renommee - Gironde',      'piste', 'Gironde',      57),
-    ('renommee_montagne',     'Renommee - Montagne',     'piste', 'Montagne',     58),
-    ('renommee_sansculotte',  'Renommee - Sans-Culotte', 'piste', 'Sans-Culotte', 60),
-    ('renommee_marais',       'Renommee - Marais',       'piste', 'Marais',       56),
-    ('renommee_royaliste',    'Renommee - Royaliste',    'piste', 'Royaliste',    55),
+    # Marqueurs de piste (4 pistes verticales + Political Regime + Turn Order
+    # + Elections). Les 4 pistes ci-dessous et les 7 marqueurs de Fame (plus
+    # bas) sont non supprimables et suivis par compteur : voir TRACKED.
+    ('tour',                  'Turn Order Marker',  'piste', None, 48),
+    ('economie',              'Economy',             'piste', None, 50),
+    ('clerge',                'Dissident Clergy',    'piste', None, 51),
+    ('coalition_piste',       'Coalition',           'piste', None, 52),
+    ('commune_piste',         'Commune of Paris (Track)', 'piste', None, 49),
+    ('regime_politique',      'Political Regime',   'piste', None, 53),
+    ('elections',             'Elections',           'piste', None, 83),
+    ('renommee_gouvernement', 'Fame - Government',      'piste', None,          54),
+    ('renommee_feuillant',    'Fame - Feuillant',       'piste', 'Feuillant',    59),
+    ('renommee_gironde',      'Fame - Gironde',         'piste', 'Gironde',      57),
+    ('renommee_montagne',     'Fame - Montagne',        'piste', 'Montagne',     58),
+    ('renommee_sansculotte',  'Fame - Sans-Culotte',    'piste', 'Sans-Culotte', 60),
+    ('renommee_marais',       'Fame - Marais',          'piste', 'Marais',       56),
+    ('renommee_royaliste',    'Fame - Royaliste',       'piste', 'Royaliste',    55),
 
     # Argent
-    ('assignat_50',           'Assignat de 50 livres', 'assignat', None, 0),
+    ('assignat_50',           'Assignat (50 Livres)', 'assignat', None, 0),
 ]
+
+# Pieces suivies par compteur numerique (+/- avec report dans le journal) et
+# non supprimables : les 4 pistes verticales de gauche et les 7 marqueurs de
+# Fame. Echelle 1-20 pour toutes (regles §3.2.2 : "the markers simply remain
+# at these limit points").
+TRACKED_PIECES = [
+    'economie', 'clerge', 'coalition_piste', 'commune_piste',
+    'renommee_gouvernement', 'renommee_feuillant', 'renommee_gironde',
+    'renommee_montagne', 'renommee_sansculotte', 'renommee_marais',
+    'renommee_royaliste',
+]
+TRACK_MIN, TRACK_MAX = 1, 20
+
+# Valeur de depart de chaque piece suivie (regles §4.3 et §4.3 fame values)
+TRACK_START = {
+    'economie': 4, 'clerge': 4, 'coalition_piste': 4, 'commune_piste': 4,
+    'renommee_gouvernement': 10, 'renommee_feuillant': 12,
+    'renommee_gironde': 11, 'renommee_montagne': 9,
+    'renommee_sansculotte': 8, 'renommee_marais': 10,
+    'renommee_royaliste': 8,
+}
+
+# Traduction des categories internes (filtrage des panneaux, cf. PIECES
+# ci-dessus) vers la valeur anglaise embarquee dans la propriete "Category"
+# des pions - celle que l'Inventaire affiche pour regrouper.
+CATEGORY_LABEL = {
+    'armee': 'Army', 'controle': 'Control', 'piste': 'Track',
+    'assignat': 'Treasury', 'depute': 'Deputy',
+}
 
 # Symboles de courant (utilises pour habiller les zones joueurs)
 SYMBOLS = {
@@ -183,6 +225,17 @@ ASSEMBLY = {
     'Royaliste':    2,
 }
 
+# Rattachement des courants non officiellement presents a la pile hote dans
+# laquelle ils sont dissimules (§4.5 : "their deputies are therefore 'hidden'
+# among another Current's deputies"). Ils sont places dans la meme pile,
+# en dessous, pour que la separation reste visible a la mise en place tout en
+# respectant la composition reelle des regles.
+ASSEMBLY_HOST = {
+    'Royaliste': 'Marais',
+    'Montagne': 'Gironde',
+    'Sans-Culotte': 'Gironde',
+}
+
 # Ancrages des six colonnes de l'Assemblee, en pixels du plateau
 # (releves sur la mise en place du mod TTS).
 ASSEMBLY_ANCHORS = {
@@ -199,24 +252,25 @@ TREASURY = {
 TREASURY_GOVERNMENT = 2300
 
 # --- Aides de jeu -----------------------------------------------------------
-# (fragment de hash du fichier TTS, nom de fichier, titre affiche)
+# (fragment de hash du fichier TTS, nom de fichier, titre affiche dans le menu
+# Help - en anglais ; "(FR)"/"(EN)" indique la langue du contenu du PDF.)
 PDFS = [
-    ('DA9849', 'regles_completes_en',       'Regles completes (EN)'),
-    ('BFB24F', 'resume_regles_en',          'Resume des regles (EN)'),
-    ('E6D3C8', 'actions_en',                'Tableau des actions (EN)'),
-    ('0909A9', 'lois_en',                   'Tableau des lois (EN)'),
-    ('FC0ED9', 'tendances_en',              'Les tendances et conditions de victoire (EN)'),
-    ('F565F2', 'cycles_regimes_en',         'Cycles des regimes (EN)'),
-    ('351FAF', 'regimes_fr',                'Tableau des regimes (FR)'),
-    ('615ED8', 'cycles_regimes_fr',         'Cycle des regimes (FR)'),
-    ('EA7731', 'cycles_regimes_ouverts_fr', 'Cycle des regimes - version ouverte (FR)'),
-    ('C8F881', 'evenements_aleatoires_fr',  'Evenements aleatoires (FR)'),
-    ('3D915F', 'evenements_aleatoires_en',  'Evenements aleatoires (EN)'),
+    ('DA9849', 'regles_completes_en',       'Complete Rules (EN)'),
+    ('BFB24F', 'resume_regles_en',          'Rules Summary (EN)'),
+    ('E6D3C8', 'actions_en',                'Actions Chart (EN)'),
+    ('0909A9', 'lois_en',                   'Laws Chart (EN)'),
+    ('FC0ED9', 'tendances_en',              'Factions & Victory Conditions (EN)'),
+    ('F565F2', 'cycles_regimes_en',         'Regime Cycles (EN)'),
+    ('351FAF', 'regimes_fr',                'Regime Chart (FR)'),
+    ('615ED8', 'cycles_regimes_fr',         'Regime Cycle (FR)'),
+    ('EA7731', 'cycles_regimes_ouverts_fr', 'Regime Cycle - Open Version (FR)'),
+    ('C8F881', 'evenements_aleatoires_fr',  'Random Events (FR)'),
+    ('3D915F', 'evenements_aleatoires_en',  'Random Events (EN)'),
 ]
 
 # --- Aides de jeu consultables dans VASSAL ----------------------------------
-# Onglets de la fenetre « Aides de jeu ». Uniquement les tableaux courts, en
-# anglais ; les regles completes et les evenements restent en PDF (menu Aide).
+# Onglets de la fenetre « Charts ». Uniquement les tableaux courts, en
+# anglais ; les regles completes et les evenements restent en PDF (menu Help).
 # (fichier PDF source, titre de l'onglet, [(page, titre du sous-onglet), ...])
 CHARTS = [
     ('actions_en', 'Actions', [(1, 'Personality Actions'), (2, 'Regional Actions')]),
