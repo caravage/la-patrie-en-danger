@@ -77,12 +77,27 @@ class Builder:
         guillotine = V.send_to_location('Guillotine', GUILLOTINE_KEY,
                                         C.GUILLOTINE_XY[0], C.GUILLOTINE_XY[1],
                                         MAP_NAME, BOARD_NAME, description='Send to Madame Guillotine')
+        # Les traits de compte rendu sont places EN DEHORS des SendToLocation :
+        # ReportState.keyEvent() execute d'abord les traits interieurs « so
+        # that their effects will be reported » (ReportState.java:122), donc le
+        # message est ecrit une fois la piece deplacee.
+        reports = [
+            V.report_state([ARREST_KEY],
+                           '$PieceName$ is arrested and sent to the Prison du Temple',
+                           description='Report arrest'),
+            V.report_state([GUILLOTINE_KEY],
+                           '$PieceName$ is sent to Madame Guillotine',
+                           description='Report execution'),
+        ]
         if len(currents) == 1:
-            traits = [arrest, guillotine,
-                      V.marker(['Category', 'Current'], ['Personality', current]),
-                      V.basic_piece(images[0], label, gpid)]
+            traits = reports + [
+                arrest, guillotine,
+                V.marker(['Category', 'Current'], ['Personality', current]),
+                V.basic_piece(images[0], label, gpid)]
             return gpid, V.build_piece(traits), self.size_of(images[0])
-        traits = [
+        traits = reports + [
+            V.report_state([FLIP_KEY], '$PieceName$ changes current',
+                           description='Report change of affiliation'),
             arrest, guillotine,
             V.layer(images, ['+ (%s)' % c for c in currents],
                     'Change Current', FLIP_KEY,
@@ -119,6 +134,10 @@ class Builder:
         gpid = self.next_gpid()
         label = 'Treasury %s' % current
         traits = [
+            # En dehors du DynamicProperty, donc $Amount$ vaut deja le
+            # nouveau montant au moment ou le message est ecrit.
+            V.report_state(TREASURY_KEYS, '$PieceName$ now holds $Amount$ assignats',
+                           description='Report treasury changes'),
             V.labeler('$Amount$', font_size=30, bg='255,255,255',
                       description='Amount in livres'),
             V.dynamic_property('Amount', TREASURY_COMMANDS, value=str(amount),
@@ -515,7 +534,12 @@ def build():
         # l'encodeur doit venir en premier : sans lui, aucune piece ne se decode
         '<VASSAL.build.module.BasicCommandEncoder/>'
         '<VASSAL.build.module.Documentation>%s</VASSAL.build.module.Documentation>'
-        '<VASSAL.build.module.GlobalOptions autoReport="Use Preferences Setting" '
+        # autoReport DOIT valoir "Always" : c'est le verrou de
+        # PieceMover.java:1177, qui n'emet le message de deplacement que si
+        # GlobalOptions.autoReportEnabled() est vrai. Avec "Use Preferences
+        # Setting", le journal dependait d'une case a cocher que chaque
+        # joueur devait activer lui-meme, et restait donc muet.
+        '<VASSAL.build.module.GlobalOptions autoReport="Always" '
         'centerOnMove="Use Preferences Setting" nonOwnerUnmaskable="Never" '
         'promptString="Choose a side" playerIdFormat="$playerName$" '
         'chatterHTMLSupport="Always"/>'

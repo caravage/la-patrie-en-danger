@@ -103,6 +103,22 @@ Corrections et ajouts demandés après relecture du premier module :
   une vraie pile sur la case.
 - **Étiquette « Government »** sur le compteur de trésorerie du
   gouvernement, pour ne pas le confondre avec ceux des six courants.
+- **Bug corrigé — le journal restait muet.** Tout l'auto-report de VASSAL est
+  conditionné par `GlobalOptions.autoReportEnabled()`
+  (`PieceMover.java:1177`). Le module déclarait
+  `autoReport="Use Preferences Setting"`, ce qui en faisait une case à cocher
+  que chaque joueur devait activer lui-même — l'aimantation sur les cases
+  fonctionnait, mais aucun déplacement n'était écrit. Passé à `"Always"`
+  (la valeur par défaut de VASSAL), donc forcé pour tous les joueurs.
+- **Actions journalisées sur les pièces.** Trois `ReportState`, placés en
+  dehors des traits qu'ils observent (`ReportState.java:122` : les traits
+  intérieurs sont exécutés d'abord « so that their effects will be reported »,
+  donc le message porte l'état à jour) :
+  * personnalités — « Robespierre is arrested and sent to the Prison du
+    Temple », « … is sent to Madame Guillotine », et le changement de courant
+    (« Carnot (Montagne) changes current ») ;
+  * trésoreries — « Treasury Government now holds 2350 assignats » à chaque
+    +/- ou saisie directe.
 - **Non-suppression.** Les 11 pièces ci-dessus et les 31 personnalités n'ont
   plus de trait Delete.
 - **Menu contextuel des personnalités : Arrest / Guillotine.** Deux
