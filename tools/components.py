@@ -216,6 +216,60 @@ TRACK_ZONE_NAMES = {
 FAME_ZONE_NAME = 'Fame'
 
 
+# --- Faces de depute --------------------------------------------------------
+# Le jeu ne contient pas toutes les combinaisons : seuls Montagne, Gironde et
+# Marais disposent des pions 2 et 10 ; Sans-Culotte, Feuillant et Royaliste
+# n'ont que 1, 3 et 5. Cela fait 24 pions distincts, et autant d'images (le
+# compte a ete verifie sur assets/images/). Un depute est donc une piece a 24
+# faces, numerotees dans cet ordre : courant par courant, valeurs croissantes.
+
+def deputy_faces():
+    """[(courant, valeur)] dans l'ordre des faces, indexees a partir de 1."""
+    return [(c, v) for c in CURRENTS for v in deputy_values(c)]
+
+
+def deputy_face_index(current, value):
+    return deputy_faces().index((current, value)) + 1
+
+
+def _next_in_cycle(items, current):
+    """Element suivant dans une liste circulaire."""
+    return items[(items.index(current) + 1) % len(items)]
+
+
+def deputy_next_value_table():
+    """face -> face du meme courant, valeur suivante (cyclique)."""
+    faces = deputy_faces()
+    out = {}
+    for i, (c, v) in enumerate(faces, 1):
+        vals = deputy_values(c)
+        out[i] = deputy_face_index(c, _next_in_cycle(vals, v))
+    return out
+
+
+def deputy_next_current_table():
+    """face -> face de valeur identique, courant suivant qui possede cette
+    valeur. Pour les valeurs 2 et 10, le cycle ne visite donc que Montagne,
+    Gironde et Marais : ce sont les seuls a avoir ces pions."""
+    faces = deputy_faces()
+    out = {}
+    for i, (c, v) in enumerate(faces, 1):
+        owners = [x for x in CURRENTS if v in deputy_values(x)]
+        out[i] = deputy_face_index(_next_in_cycle(owners, c), v)
+    return out
+
+
+def lookup_expression(prop, table):
+    """Chaine de ternaires BeanShell « {p==1?4:p==2?5:...:1} ».
+
+    Elle est logee dans le champ propertyName de la couche, ou dans la valeur
+    d'un PropertySetter. Les deux sont des FormattedString, qui acceptent une
+    expression BeanShell entre accolades (FormattedString.java:48)."""
+    items = sorted(table)
+    body = ''.join('%s==%d?%d:' % (prop, k, table[k]) for k in items[:-1])
+    return '{' + body + str(table[items[-1]]) + '}'
+
+
 def track_cell(base, value):
     """Centre en pixels de la case `value` (1-20) de la piste de `base`."""
     if base in TRACK_COLUMNS:
@@ -346,6 +400,24 @@ CHARTS = [
     ('cycles_regimes_en', 'Regime Cycles', [(1, None)]),
     ('tendances_en', 'Factions', [(1, 'Royalist'), (2, 'Feuillant'), (3, 'Marais'),
                                   (4, 'Gironde'), (5, 'Montagnard'), (6, 'Sans-Culottes')]),
+]
+
+# La table des evenements aleatoires, dans sa propre fenetre (bouton place
+# avant celui des Charts). Le document en compte 9 pages : quatre regimes de
+# deux pages chacun, plus les notes du traducteur. Les rubriques de chaque
+# page ont ete relevees dans le PDF (ECONOMY / POLITICS d'un cote,
+# COUNTER-REVOLUTION / PARIS COMMUNE de l'autre).
+EVENTS_SRC = 'evenements_aleatoires_en'
+EVENTS = [
+    (EVENTS_SRC, 'Legislative',        [(1, 'Economy & Politics'),
+                                        (2, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, 'Convention',         [(3, 'Economy & Politics'),
+                                        (4, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, 'Terror',             [(5, 'Economy & Politics'),
+                                        (6, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, 'First Republic',     [(7, 'Economy & Politics'),
+                                        (8, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, 'Translation Notes',  [(9, None)]),
 ]
 CHART_DPI = 150
 

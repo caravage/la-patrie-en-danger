@@ -92,11 +92,11 @@ def basic_piece(image, name, gpid):
     )
 
 
-def delete(command='Supprimer', key=keystroke(68)):        # Ctrl+D
+def delete(command='Delete', key=keystroke(68)):        # Ctrl+D
     return Trait('delete;' + seq(';', command, key, ''), '')
 
 
-def clone(command='Dupliquer', key=keystroke(75)):         # Ctrl+K
+def clone(command='Clone', key=keystroke(75)):         # Ctrl+K
     return Trait('clone;' + seq(';', command, key, ''), '')
 
 
@@ -106,9 +106,16 @@ def marker(keys, values):
 
 
 def layer(images, level_names, up_command, up_key, layer_name='Etat',
-          description='', start_level=1):
+          description='', start_level=1, follow_property=''):
     """Embellishment (« Couche ») version 2 : 33 champs, dans l'ordre exact
-    de Embellishment.myGetType()."""
+    de Embellishment.myGetType().
+
+    follow_property : si non vide, la couche ne defile plus par commande mais
+    suit la valeur d'une propriete (champ 23). VASSAL accepte ici une simple
+    propriete ou une expression BeanShell entre accolades
+    (Expression.createSimplePropertyExpression). La sequence etant delimitee
+    par ';', une expression a base de ternaires ':' n'a pas besoin d'y etre
+    echappee."""
     fields = [
         '',            # 1  activateCommand (couche toujours active)
         CTRL,          # 2  activateModifiers
@@ -131,8 +138,8 @@ def layer(images, level_names, up_command, up_key, layer_name='Etat',
         layer_name,    # 19 name
         '',            # 20 rndKey
         '',            # 21 rndText
-        False,         # 22 followProperty
-        '',            # 23 propertyName
+        bool(follow_property),  # 22 followProperty
+        follow_property,        # 23 propertyName
         1,             # 24 firstLevelValue
         1,             # 25 version (encodage moderne)
         True,          # 26 alwaysActive
@@ -182,7 +189,7 @@ def dynamic_property(key, commands, value='0', numeric=True,
 def labeler(text, font_size=26, fg='0,0,0', bg='',
             v_pos='c', h_pos='c', v_off=0, h_off=0,
             font_family='Dialog', font_style=1, description='',
-            label_key='', menu_command=''):
+            label_key='', menu_command='', property_name=''):
     """Labeler (« Etiquette texte »). Le texte est evalue comme un format :
     « $Montant$ » affiche donc la valeur de la propriete Montant.
     Passer label_key/menu_command pour une etiquette editable par le joueur
@@ -203,7 +210,7 @@ def labeler(text, font_size=26, fg='0,0,0', bg='',
         font_family,   # 13 police
         font_style,    # 14 style
         0,             # 15 rotation
-        '',            # 16 propriete exposee
+        property_name, # 16 propriete exposee (vide = texte non lisible ailleurs)
         description,   # 17 description
         False,         # 18 toujours utiliser le format
     ]
@@ -237,6 +244,31 @@ def hideable(hide_key, command='Hide/Reveal', bg='0,0,0', access='side:',
         hide_key, command, bg, access, transparency, description, False,
     ]
     return Trait('hide;' + seq(';', *fields), 'null')
+
+
+def obscurable(hide_key, mask_image, command='Mask', access='side:',
+               mask_name='', description=''):
+    """Obscurable (« Masquer ») : contrairement a Hideable, la piece reste
+    VISIBLE des autres joueurs, mais ils en voient `mask_image` au lieu de son
+    contenu reel. C'est ce que donne le style d'affichage 'G' (IMAGE) de
+    Obscurable.mySetType() : le champ 4 vaut 'G' suivi du nom de l'image.
+
+    access='side:' : seul le camp qui a masque la piece peut la reveler.
+    Etat : 'null;' = non masquee ; sinon le camp qui la masque."""
+    fields = [
+        hide_key,               # 1  touche de masquage
+        mask_image,             # 2  image vue quand un AUTRE camp l'a masquee
+        command,                # 3  libelle du menu contextuel
+        'G' + mask_image,       # 4  style d'affichage + image vue par les autres
+        mask_name,              # 5  nom affiche quand masquee
+        access,                 # 6  qui peut demasquer
+        '',                     # 7  commande « jeter un oeil » (inutile en 'G')
+        description,            # 8  description
+        False,                  # 9  revelation auto au survol
+        '',                     # 10 touche de distribution
+        '',                     # 11 expression de distribution
+    ]
+    return Trait('obs;' + seq(';', *fields), seq(';', 'null', ''))
 
 
 def send_to_location(command, key, x, y, map_name, board_name,

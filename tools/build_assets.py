@@ -196,7 +196,7 @@ def render_charts():
     """Convertit les tableaux courts en images pour la fenetre « Aides de jeu »."""
     import pymupdf
     out = []
-    for src, _tab, pages in C.CHARTS:
+    for src, _tab, pages in C.CHARTS + C.EVENTS:
         doc = pymupdf.open(os.path.join(PDF, src + '.pdf'))
         for pno, _title in pages:
             pix = doc[pno - 1].get_pixmap(dpi=C.CHART_DPI)

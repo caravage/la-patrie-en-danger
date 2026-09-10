@@ -31,7 +31,8 @@ VASSAL_VERSION = '3.7.27'
 BOARD_NAME = 'Game Board'
 MAP_NAME = 'Game Board'
 
-FLIP_KEY = V.keystroke(70)      # Ctrl+F : change current affiliation
+FLIP_KEY = V.keystroke(70)      # Ctrl+F : change party
+DEPUTY_VALUE_KEY = V.keystroke(86)  # Ctrl+V : change a deputy's value
 ARREST_KEY = V.keystroke(65)    # Ctrl+A : Arrest
 GUILLOTINE_KEY = V.keystroke(71)  # Ctrl+G : Guillotine
 HIDE_KEY = V.keystroke(72)      # Ctrl+H : Hide/Reveal a secret note
@@ -108,22 +109,59 @@ class Builder:
         return gpid, V.build_piece(traits), self.size_of(images[0])
 
     def deputy(self, current, value):
-        """Depute de valeur. Un clic droit le fait passer d'un courant a
-        l'autre (§7.5.2.1), parmi ceux qui disposent de cette valeur."""
+        """Depute : une piece a 24 faces, celles qui existent reellement.
+
+        Une seule couche peut porter l'image d'une piece, or il faut ici deux
+        axes (courant et valeur). La couche suit donc une propriete `Face`
+        (1-24) plutot que de defiler ; deux commandes de menu recalculent cette
+        face par table de correspondance :
+          * « Change Value » (§7.5.2.1) passe a la valeur suivante DU MEME
+            courant ;
+          * « Change Party » passe au courant suivant qui possede cette valeur.
+        Les pions 2 et 10 n'existant que chez Montagne, Gironde et Marais, le
+        cycle des courants ne visite que ces trois-la pour ces valeurs."""
         gpid = self.next_gpid()
-        order = [c for c in C.CURRENTS if value in C.deputy_values(c)]
-        images = ['depute_%s_%d.png' % (C.CURRENT_SLUG[c], value) for c in order]
+        faces = C.deputy_faces()
+        images = ['depute_%s_%d.png' % (C.CURRENT_SLUG[c], v) for c, v in faces]
+        names = ['Deputy %s (%d)' % (c, v) for c, v in faces]
         label = 'Deputy %s (%d)' % (current, value)
+        start = C.deputy_face_index(current, value)
         traits = [
             V.delete(),
-            V.layer(images, ['Deputy %s (%d)' % (c, value) for c in order],
-                    'Change Current', FLIP_KEY, layer_name='Current',
-                    description='Deputy current affiliation',
-                    start_level=order.index(current) + 1),
-            V.marker(['Category', 'Value'], ['Deputy', str(value)]),
+            V.layer(images, names, '', '', layer_name='Face',
+                    description='Deputy face (party and value)',
+                    follow_property='Face'),
+            V.dynamic_property('Face', [
+                ('Change Value', DEPUTY_VALUE_KEY,
+                 ('P', C.lookup_expression('Face', C.deputy_next_value_table()))),
+                ('Change Party', FLIP_KEY,
+                 ('P', C.lookup_expression('Face', C.deputy_next_current_table()))),
+            ], value=str(start), numeric=False,
+                description='Which of the 24 deputy counters this piece shows'),
+            V.marker(['Category'], ['Deputy']),
             V.basic_piece('', label, gpid),
         ]
         return gpid, V.build_piece(traits), self.size_of(images[0]), label
+
+    def control_marker(self, base, label, current):
+        """Marqueur de controle regional : un clic droit le transforme en
+        celui de n'importe quel autre parti. Une seule couche de 6 images
+        suffit, elle defile par « Change Party ». La propriete Current n'est
+        pas figee dans un Marker, qui mentirait des la premiere
+        transformation : c'est le nom de la piece, porte par le niveau de la
+        couche, qui dit a quel parti elle appartient."""
+        gpid = self.next_gpid()
+        images = ['marqueur_%s.png' % C.CURRENT_SLUG[c] for c in C.CURRENTS]
+        names = ['%s Control' % c for c in C.CURRENTS]
+        traits = [
+            V.delete(),
+            V.layer(images, names, 'Change Party', FLIP_KEY,
+                    layer_name='Party', description='Controlling party',
+                    start_level=C.CURRENTS.index(current) + 1),
+            V.marker(['Category'], ['Control']),
+            V.basic_piece('', label, gpid),
+        ]
+        return gpid, V.build_piece(traits), self.size_of(images[0])
 
     def treasury(self, current, amount, title=None):
         """Compteur numerique d'assignats : +/- et saisie directe.
@@ -178,17 +216,23 @@ class Builder:
         return gpid, V.build_piece(traits), self.size_of(image)
 
     def secret_note(self):
-        """Pion "Secret Note" : masque au clic (visible du seul camp qui l'a
-        masque) jusqu'a ce qu'il choisisse de la reveler a tous, texte libre
-        editable par le proprietaire."""
+        """Note : le pion reste visible de tous, mais son texte ne l'est pas.
+
+        Obscurable (et non Hideable, qui escamotait la piece entiere) avec le
+        style d'affichage 'G' : les autres joueurs voient la fiche vierge a la
+        place du contenu reel. Le trait est place a l'exterieur de l'etiquette,
+        donc c'est bien le texte qui disparait. Seul le camp qui a masque la
+        note peut la reveler (access='side:'). Aucun texte par defaut : la
+        fiche est vierge tant que le joueur n'a rien ecrit."""
         gpid = self.next_gpid()
-        label = 'Secret Note'
+        label = 'Note'
         image = 'note_blank.png'
         traits = [
-            V.hideable(HIDE_KEY, command='Hide/Reveal', bg='0,0,0',
-                      access='side:', description='Secret note visibility'),
-            V.labeler('Click to edit...', font_size=13, fg='70,55,35',
+            V.obscurable(HIDE_KEY, image, command='Hide/Reveal text',
+                         access='side:', description='Secret note visibility'),
+            V.labeler('', font_size=13, fg='70,55,35',
                       label_key=V.keystroke(69), menu_command='Edit Text',
+                      property_name='TextLabel',
                       description='Secret note text'),
             V.delete(),
             V.marker(['Category'], ['Note']),
@@ -263,6 +307,11 @@ def build():
     for base, label, cat, current, _idx in C.PIECES:
         if base in C.TRACKED_PIECES:
             gpid, d, size = b.tracker(base, label, cat, current)
+        elif cat == 'controle' and current:
+            # les six marqueurs de parti sont transformables entre eux ;
+            # Coalition Control et Revolt n'appartiennent a aucun parti et
+            # restent des pions simples
+            gpid, d, size = b.control_marker(base, label, current)
         else:
             gpid, d, size = b.simple(base, label, cat, current)
         defs[base] = (gpid, d, size, label, cat)
@@ -280,7 +329,7 @@ def build():
     defs['tresorerie_gouvernement'] = (gpid, d, size, label, 'treasury')
 
     gpid, d, size = b.secret_note()
-    defs['secret_note'] = (gpid, d, size, 'Secret Note', 'note')
+    defs['secret_note'] = (gpid, d, size, 'Note', 'note')
 
     # ---- palette --------------------------------------------------------
     def panel(title, bases, cols=6):
@@ -384,6 +433,15 @@ def build():
               i * col_w + col_w - 150, board_h + 200)
     place('tresorerie_gouvernement', board_w // 2, board_h + 430)
 
+    # une note par camp, sous sa trésorerie. Le compteur d'assignats descend
+    # jusqu'a y=2802 et l'encart du camp s'arrete vers y=2981 : la fiche
+    # (220x150) tient dans cet intervalle. Elle est decalee de 100 px vers la
+    # gauche par rapport au compteur pour ne pas passer sous la caisse du
+    # Gouvernement, qui reste ou elle est.
+    for i, cur in enumerate(C.CURRENTS):
+        place('secret_note', i * col_w + col_w - 250, board_h + 374,
+              name='Note %s' % cur)
+
     # Assemblee nationale : composition des regles §4.5, en pions de valeur.
     # Les courants non officiellement presents sont dans la MEME pile que
     # leur hote, mais places en dessous (donc visuellement separes) :
@@ -486,19 +544,28 @@ def build():
         return ('<VASSAL.build.widget.Chart chartName=%s description="" fileName=%s/>'
                 % (quoteattr(title), quoteattr(image)))
 
-    tabs = []
-    for src, tab_title, pages in C.CHARTS:
-        if len(pages) == 1:
-            tabs.append(chart(tab_title, 'aide_%s_%d.png' % (src, pages[0][0])))
-        else:
-            inner = ''.join(chart(t, 'aide_%s_%d.png' % (src, pno)) for pno, t in pages)
-            tabs.append('<VASSAL.build.widget.TabWidget entryName=%s>%s'
-                        '</VASSAL.build.widget.TabWidget>' % (quoteattr(tab_title), inner))
-    charts = ('<VASSAL.build.module.ChartWindow name="Charts" '
-              'text="Charts" tooltip="Reference charts" icon="" hotkey="" description="">'
-              '<VASSAL.build.widget.TabWidget entryName="Charts">%s'
-              '</VASSAL.build.widget.TabWidget></VASSAL.build.module.ChartWindow>'
-              % ''.join(tabs))
+    def chart_window(name, tooltip, groups):
+        tabs = []
+        for src, tab_title, pages in groups:
+            if len(pages) == 1:
+                tabs.append(chart(tab_title, 'aide_%s_%d.png' % (src, pages[0][0])))
+            else:
+                inner = ''.join(chart(t, 'aide_%s_%d.png' % (src, pno))
+                                for pno, t in pages)
+                tabs.append('<VASSAL.build.widget.TabWidget entryName=%s>%s'
+                            '</VASSAL.build.widget.TabWidget>'
+                            % (quoteattr(tab_title), inner))
+        return ('<VASSAL.build.module.ChartWindow name=%s text=%s tooltip=%s '
+                'icon="" hotkey="" description="">'
+                '<VASSAL.build.widget.TabWidget entryName=%s>%s'
+                '</VASSAL.build.widget.TabWidget></VASSAL.build.module.ChartWindow>'
+                % (quoteattr(name), quoteattr(name), quoteattr(tooltip),
+                   quoteattr(name), ''.join(tabs)))
+
+    # deux fenetres distinctes : la table des evenements aleatoires est assez
+    # volumineuse (9 pages) pour meriter son propre bouton, place avant Charts.
+    events = chart_window('Events', 'Random events table', C.EVENTS)
+    charts = chart_window('Charts', 'Reference charts', C.CHARTS)
 
     # ---- menu Help : les 11 PDF -------------------------------------------
     docs = ''.join(
@@ -554,12 +621,15 @@ def build():
         'leafFormat="$PieceName$" nonLeafFormat="$PropertyValue$" '
         'label="Pieces in play" launchFunction="functionHide" refreshHotkey="" '
         'sortFormat="$PieceName$" pieceZoom="0.33" pieceZoom2="0.6" pieceZoom3="1.0"/>'
+        # Events avant Charts : l'ordre des composants dans le XML est celui
+        # des boutons de la barre d'outils.
+        '%s'
         '%s'
         '%s'
         '</VASSAL.build.GameModule>'
         % (quoteattr(MODULE_NAME), quoteattr(MODULE_VERSION), quoteattr(MODULE_DESC),
            quoteattr(VASSAL_VERSION), b.gpid + 100, docs, roster, palette, dice,
-           charts, the_map)
+           events, charts, the_map)
     )
     return xml, b
 

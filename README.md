@@ -103,6 +103,35 @@ Corrections et ajouts demandés après relecture du premier module :
   une vraie pile sur la case.
 - **Étiquette « Government »** sur le compteur de trésorerie du
   gouvernement, pour ne pas le confondre avec ceux des six courants.
+- **Marqueurs de contrôle transformables.** Les six marqueurs de parti
+  portent une couche de six images et un « Change Party » au clic droit.
+  Leur propriété `Current` n'est plus figée dans un `Marker`, qui aurait
+  menti dès la première transformation : c'est le nom de la pièce, porté par
+  le niveau de la couche, qui dit à quel parti elle appartient. Coalition
+  Control et Revolt, qui n'appartiennent à aucun parti, restent inchangés.
+- **Députés : parti *et* valeur modifiables.** Une pièce ne peut porter
+  qu'une seule couche d'image, or il faut ici deux axes. La couche suit donc
+  une propriété `Face` (1–24) au lieu de défiler, et deux commandes la
+  recalculent par table de correspondance (`components.deputy_next_*_table`) :
+  * « Change Value » passe à la valeur suivante **du même parti** ;
+  * « Change Party » passe au parti suivant **qui possède cette valeur**.
+  Le jeu ne contient que 24 pions de député : les valeurs 2 et 10 n'existent
+  que chez Montagne, Gironde et Marais (compté sur les images). Le cycle des
+  valeurs d'un député Sans-Culotte, Feuillant ou Royaliste est donc 1‑3‑5, et
+  « Change Party » sur un pion de valeur 2 ou 10 ne visite que les trois
+  partis qui l'ont.
+- **Fenêtre « Events ».** La table des événements aléatoires (9 pages :
+  quatre régimes de deux pages, plus les notes du traducteur) a son propre
+  bouton, placé avant Charts — l'ordre des boutons est celui des composants
+  dans le `buildFile.xml`.
+- **La note est désormais visible de tous mais illisible quand masquée.**
+  `Hideable` escamotait la pièce entière ; `Obscurable` avec le style
+  d'affichage `'G'` montre aux autres joueurs la fiche vierge à la place du
+  contenu. Le trait est placé à l'extérieur de l'étiquette, donc c'est bien
+  le texte qui disparaît. Une note est posée dans chaque encart de camp, sous
+  la trésorerie, et la fiche n'a plus de texte par défaut.
+- **Menu contextuel entièrement en anglais.** Les traits Delete et Clone
+  portaient encore les libellés français « Supprimer » et « Dupliquer ».
 - **Bug corrigé — le journal restait muet.** Tout l'auto-report de VASSAL est
   conditionné par `GlobalOptions.autoReportEnabled()`
   (`PieceMover.java:1177`). Le module déclarait
