@@ -273,6 +273,25 @@ def build():
                'buttonName="" icon="" tooltip="">%s%s</VASSAL.build.module.Map>'
                % (quoteattr(MAP_NAME), ''.join(map_parts), ''.join(stacks)))
 
+    # ---- fenetre « Aides de jeu » : tableaux consultables dans VASSAL ----
+    def chart(title, image):
+        return ('<VASSAL.build.widget.Chart chartName=%s description="" fileName=%s/>'
+                % (quoteattr(title), quoteattr(image)))
+
+    tabs = []
+    for src, tab_title, pages in C.CHARTS:
+        if len(pages) == 1:
+            tabs.append(chart(tab_title, 'aide_%s_%d.png' % (src, pages[0][0])))
+        else:
+            inner = ''.join(chart(t, 'aide_%s_%d.png' % (src, pno)) for pno, t in pages)
+            tabs.append('<VASSAL.build.widget.TabWidget entryName=%s>%s'
+                        '</VASSAL.build.widget.TabWidget>' % (quoteattr(tab_title), inner))
+    charts = ('<VASSAL.build.module.ChartWindow name="Aides de jeu" '
+              'text="Aides" tooltip="Tableaux de jeu" icon="" hotkey="" description="">'
+              '<VASSAL.build.widget.TabWidget entryName="Aides de jeu">%s'
+              '</VASSAL.build.widget.TabWidget></VASSAL.build.module.ChartWindow>'
+              % ''.join(tabs))
+
     # ---- aides de jeu ---------------------------------------------------
     docs = ''.join(
         '<VASSAL.build.module.documentation.BrowserPDFFile pdfFile=%s title=%s/>'
@@ -308,7 +327,7 @@ def build():
         '%s'
         '<VASSAL.build.module.NotesWindow buttonText="Notes" '
         'tooltip="Notes de partie et promesses secretes" icon="/images/notes.gif" hotkey=""/>'
-        '%s%s%s'
+        '%s%s%s%s'
         '<VASSAL.build.module.Inventory name="Inventaire" buttonText="Inventaire" '
         'tooltip="Lister les pions en jeu" icon="" hotkey="" '
         'groupBy="Categorie" sortStrategy="Alphabetically" include="{true}" '
@@ -319,7 +338,8 @@ def build():
         'sortFormat="$PieceName$" pieceZoom="0.33" pieceZoom2="0.6" pieceZoom3="1.0"/>'
         '</VASSAL.build.GameModule>'
         % (quoteattr(MODULE_NAME), quoteattr(MODULE_VERSION), quoteattr(MODULE_DESC),
-           quoteattr(VASSAL_VERSION), b.gpid + 100, docs, roster, the_map, palette, dice)
+           quoteattr(VASSAL_VERSION), b.gpid + 100, docs, roster, charts,
+           the_map, palette, dice)
     )
     return xml, b
 

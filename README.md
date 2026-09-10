@@ -20,7 +20,11 @@ mise en place ; les joueurs appliquent les règles eux‑mêmes.
 * **Marqueurs** de contrôle régional, de révolte et de piste.
 * **Trésoreries** : un compteur numérique par camp plus celui du Gouvernement,
   avec +50/+100/+200, −50/−100/−200 et saisie directe du montant.
-* **11 aides de jeu PDF** dans le menu Aide.
+* **Fenêtre « Aides de jeu »** consultable sans quitter VASSAL : Personality
+  Actions, Regional Actions, The Laws, Regime Cycles, et une page par courant
+  pour les Factions (en anglais).
+* **11 aides de jeu PDF** dans le menu Aide, dont les règles complètes et les
+  événements aléatoires (FR et EN), qui s'ouvrent dans le lecteur du système.
 * **Notes différées** (menu Notes) : chacun peut écrire une promesse secrète,
   visible de tous seulement une fois révélée.
 * Boutons de dés 1d6 et 2d6, sélecteur de camp, inventaire.

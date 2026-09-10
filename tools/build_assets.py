@@ -170,6 +170,22 @@ def player_zone_setup(board_h, board_w):
     return entries
 
 
+def render_charts():
+    """Convertit les tableaux courts en images pour la fenetre « Aides de jeu »."""
+    import pymupdf
+    out = []
+    for src, _tab, pages in C.CHARTS:
+        doc = pymupdf.open(os.path.join(PDF, src + '.pdf'))
+        for pno, _title in pages:
+            pix = doc[pno - 1].get_pixmap(dpi=C.CHART_DPI)
+            im = Image.open(io.BytesIO(pix.tobytes('png'))).convert('RGB')
+            name = 'aide_%s_%d.png' % (src, pno)
+            im.convert('P', palette=Image.ADAPTIVE, colors=64).save(
+                os.path.join(IMG, name), optimize=True)
+            out.append((name, im.size))
+    return out
+
+
 def extract_deputy_counters(countersheet):
     """Decoupe les deputes de valeur dans la planche vectorielle."""
     import pymupdf
@@ -256,6 +272,7 @@ def main(ttsmod, countersheet=None):
 
         if countersheet:
             written.extend(extract_deputy_counters(countersheet))
+        written.extend(render_charts())
 
         setup = {'board': extract_setup(ttsmod, index),
                  'zones': player_zone_setup(C.BOARD_PX[1], C.BOARD_PX[0])}

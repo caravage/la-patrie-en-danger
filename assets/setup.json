@@ -61,36 +61,6 @@
    "y": 385
   },
   {
-   "piece": "depute_feuillant",
-   "x": 724,
-   "y": 2186
-  },
-  {
-   "piece": "depute_gironde",
-   "x": 475,
-   "y": 2187
-  },
-  {
-   "piece": "depute_marais",
-   "x": 599,
-   "y": 2182
-  },
-  {
-   "piece": "depute_montagne",
-   "x": 354,
-   "y": 2185
-  },
-  {
-   "piece": "depute_royaliste",
-   "x": 844,
-   "y": 2185
-  },
-  {
-   "piece": "depute_sansculotte",
-   "x": 232,
-   "y": 2185
-  },
-  {
    "piece": "economie",
    "x": 508,
    "y": 388

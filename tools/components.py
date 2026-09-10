@@ -214,6 +214,19 @@ PDFS = [
     ('3D915F', 'evenements_aleatoires_en',  'Evenements aleatoires (EN)'),
 ]
 
+# --- Aides de jeu consultables dans VASSAL ----------------------------------
+# Onglets de la fenetre « Aides de jeu ». Uniquement les tableaux courts, en
+# anglais ; les regles completes et les evenements restent en PDF (menu Aide).
+# (fichier PDF source, titre de l'onglet, [(page, titre du sous-onglet), ...])
+CHARTS = [
+    ('actions_en', 'Actions', [(1, 'Personality Actions'), (2, 'Regional Actions')]),
+    ('lois_en', 'The Laws', [(1, None)]),
+    ('cycles_regimes_en', 'Regime Cycles', [(1, None)]),
+    ('tendances_en', 'Factions', [(1, 'Royalist'), (2, 'Feuillant'), (3, 'Marais'),
+                                  (4, 'Gironde'), (5, 'Montagnard'), (6, 'Sans-Culottes')]),
+]
+CHART_DPI = 150
+
 # --- Geometrie --------------------------------------------------------------
 BOARD_UGC = ('1687147350559794172', 'AD967B112E1328CD6AF1496F464FBF143C60F04E')
 BOARD_PX = (3543, 2516)
