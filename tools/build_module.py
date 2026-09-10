@@ -36,17 +36,6 @@ ARREST_KEY = V.keystroke(65)    # Ctrl+A : Arrest
 GUILLOTINE_KEY = V.keystroke(71)  # Ctrl+G : Guillotine
 HIDE_KEY = V.keystroke(72)      # Ctrl+H : Hide/Reveal a secret note
 
-# Commandes de compteur (+/- avec report), reutilisees pour les 4 pistes et
-# les 7 marqueurs de Fame.
-TRACK_COMMANDS = [
-    ('+1', V.keystroke(49), ('I', 1)),
-    ('-1', V.keystroke(50), ('I', -1)),
-    ('+5', V.keystroke(51), ('I', 5)),
-    ('-5', V.keystroke(52), ('I', -5)),
-    ('Set Value', V.keystroke(77), ('R', 'New value (1-20)')),
-]
-TRACK_KEYS = [k for _l, k, _c in TRACK_COMMANDS]
-
 TREASURY_COMMANDS = [
     ('+ 50', V.keystroke(49), ('I', 50)),
     ('+ 100', V.keystroke(50), ('I', 100)),
@@ -121,8 +110,12 @@ class Builder:
         ]
         return gpid, V.build_piece(traits), self.size_of(images[0]), label
 
-    def treasury(self, current, amount):
-        """Compteur numerique d'assignats : +/- et saisie directe."""
+    def treasury(self, current, amount, title=None):
+        """Compteur numerique d'assignats : +/- et saisie directe.
+
+        `title` ajoute une etiquette fixe en haut du pion. Elle est portee par
+        le trait le plus externe, donc dessinee par-dessus le montant, et sert
+        a distinguer la caisse du Gouvernement de celles des six courants."""
         gpid = self.next_gpid()
         label = 'Treasury %s' % current
         traits = [
@@ -133,29 +126,26 @@ class Builder:
             V.marker(['Category', 'Current'], ['Treasury', current]),
             V.basic_piece('assignat_50.png', label, gpid),
         ]
+        if title:
+            traits.insert(0, V.labeler(title, font_size=22, bg='255,255,255',
+                                       v_pos='t', v_off=18,
+                                       description='Owner of this treasury'))
         return gpid, V.build_piece(traits), self.size_of('assignat_50.png'), label
 
-    def tracker(self, base, label, category, current, start):
-        """Piste ou marqueur de Fame : compteur numerique 1-20, non
-        supprimable, chaque changement est journalise (Ok pour les
-        trackers)."""
+    def tracker(self, base, label, category, current):
+        """Piste ou marqueur de Fame.
+
+        Le pion ne porte aucun chiffre : la valeur courante est donnee par la
+        case du plateau sur laquelle il se trouve. Les cases sont declarees
+        comme regions nommees (cf. `zoned_grid`), si bien que tout deplacement
+        d'une case a l'autre est journalise par la carte elle-meme. Le pion est
+        non supprimable (aucun trait `delete`)."""
         gpid = self.next_gpid()
         image = base + '.png'
         keys, vals = ['Category'], [C.CATEGORY_LABEL.get(category, category)]
         if current:
             keys.append('Current'); vals.append(current)
-        traits = [
-            V.report_state(TRACK_KEYS, '$PieceName$: $Value$',
-                           description='Report track changes'),
-            V.labeler('$Value$', font_size=28, bg='255,255,255',
-                      description='Current value'),
-            V.dynamic_property('Value', TRACK_COMMANDS, value=str(start),
-                               numeric=True, min_value=C.TRACK_MIN,
-                               max_value=C.TRACK_MAX, wrap=False,
-                               description='Track value (1-20)'),
-            V.marker(keys, vals),
-            V.basic_piece(image, label, gpid),
-        ]
+        traits = [V.marker(keys, vals), V.basic_piece(image, label, gpid)]
         return gpid, V.build_piece(traits), self.size_of(image)
 
     def simple(self, base, label, category, current):
@@ -194,6 +184,48 @@ def slot(entry_name, gpid, definition, size):
             % (quoteattr(entry_name), gpid, size[1], size[0], escape(definition)))
 
 
+def zoned_grid():
+    """Grille zonee du plateau : une zone par piste, chacune portant une
+    grille irreguliere dont les 20 regions sont les cases numerotees.
+
+    C'est ce qui rend les deplacements lisibles dans le journal : la carte
+    nomme la position d'un pion par « <zone> <region> » (locationFormat
+    ci-dessous), donc « Economy 6 ». Comme la carte est reglee sur
+    onlyReportChangedLocation, seuls les deplacements qui changent de case
+    sont annonces ; partout ailleurs sur le plateau il n'y a pas de grille,
+    la position vaut toujours « Offboard » et rien n'est journalise.
+
+    snapto : un marqueur lache dans la colonne se cale au centre de la case.
+    Les regions sont invisibles (visible="false") : le quadrillage est deja
+    imprime sur le plateau."""
+    zones = []
+    for base in C.TRACKED_PIECES:
+        if base in C.FAME_PIECES:
+            continue
+        zones.append((C.TRACK_ZONE_NAMES[base], base))
+    zones.append((C.FAME_ZONE_NAME, C.FAME_PIECES[0]))
+
+    out = []
+    for name, base in zones:
+        regions = ''.join(
+            '<VASSAL.build.module.map.boardPicker.board.Region name=%s '
+            'originx="%d" originy="%d"/>'
+            % ((quoteattr(str(v)),) + C.track_cell(base, v))
+            for v in range(C.TRACK_MIN, C.TRACK_MAX + 1))
+        out.append(
+            '<VASSAL.build.module.map.boardPicker.board.mapgrid.Zone '
+            'name=%s locationFormat="$name$ $gridLocation$" path=%s '
+            'useHighlight="false" useParentGrid="false">'
+            '<VASSAL.build.module.map.boardPicker.board.RegionGrid '
+            'snapto="true" visible="false" fontsize="9">%s'
+            '</VASSAL.build.module.map.boardPicker.board.RegionGrid>'
+            '</VASSAL.build.module.map.boardPicker.board.mapgrid.Zone>'
+            % (quoteattr(name), quoteattr(C.track_zone_polygon(base)), regions))
+    return ('<VASSAL.build.module.map.boardPicker.board.ZonedGrid>%s'
+            '</VASSAL.build.module.map.boardPicker.board.ZonedGrid>'
+            % ''.join(out))
+
+
 def setup_stack(name, x, y, inner):
     return ('<VASSAL.build.module.map.SetupStack name=%s owningBoard=%s '
             'useGridLocation="false" x="%d" y="%d">%s'
@@ -211,7 +243,7 @@ def build():
 
     for base, label, cat, current, _idx in C.PIECES:
         if base in C.TRACKED_PIECES:
-            gpid, d, size = b.tracker(base, label, cat, current, C.TRACK_START[base])
+            gpid, d, size = b.tracker(base, label, cat, current)
         else:
             gpid, d, size = b.simple(base, label, cat, current)
         defs[base] = (gpid, d, size, label, cat)
@@ -224,7 +256,8 @@ def build():
     for cur in C.CURRENTS:
         gpid, d, size, label = b.treasury(cur, C.TREASURY[cur])
         defs['tresorerie_' + C.CURRENT_SLUG[cur]] = (gpid, d, size, label, 'treasury')
-    gpid, d, size, label = b.treasury('Government', C.TREASURY_GOVERNMENT)
+    gpid, d, size, label = b.treasury('Government', C.TREASURY_GOVERNMENT,
+                                      title='Government')
     defs['tresorerie_gouvernement'] = (gpid, d, size, label, 'treasury')
 
     gpid, d, size = b.secret_note()
@@ -270,16 +303,54 @@ def build():
         # plus bas d'apres les regles §4.5, avec des pions de valeur
         if e['piece'].startswith('depute'):
             continue
+        # les marqueurs de piste ne sont plus places d'apres le mod TTS (qui
+        # les posait « a peu pres », et rejetait meme les marqueurs de Fame
+        # sur une seconde rangee sous la piste) mais au centre exact de leur
+        # case, calcule a partir de la geometrie mesuree du plateau.
+        if e['piece'] in C.TRACKED_PIECES:
+            continue
         gpid, d, size, label, _cat = defs[e['piece']]
         g = b.next_gpid()
         d2 = d.replace(';%d;0' % gpid, ';%d;0' % g)
         stacks.append(setup_stack(label, e['x'], e['y'], slot(label, g, d2, size)))
 
-    def place(base, x, y, name=None):
+    def one(base):
+        """Un exemplaire de `base` avec un gpid propre : (slot XML, libelle)."""
         gpid, d, size, label, _cat = defs[base]
         g = b.next_gpid()
-        d2 = d.replace(';%d;0' % gpid, ';%d;0' % g)
-        stacks.append(setup_stack(name or label, x, y, slot(label, g, d2, size)))
+        return slot(label, g, d.replace(';%d;0' % gpid, ';%d;0' % g), size), label
+
+    def place(base, x, y, name=None):
+        inner, label = one(base)
+        stacks.append(setup_stack(name or label, x, y, inner))
+
+    # --- marqueurs de piste : au centre de leur case de depart -------------
+    # Les 4 pistes verticales ont chacune leur colonne, donc une pile par
+    # piste. Sur la piste de Fame en revanche plusieurs camps partagent la
+    # meme valeur de depart (Royaliste et Sans-Culotte a 8, Marais et
+    # Gouvernement a 10) : leurs marqueurs vont dans UNE SEULE SetupStack,
+    # donc dans une vraie pile posee sur la case, et non cote a cote.
+    for base in C.TRACKED_PIECES:
+        if base in C.FAME_PIECES:
+            continue
+        value = C.TRACK_START[base]
+        x, y = C.track_cell(base, value)
+        place(base, x, y, '%s @ %d' % (defs[base][3], value))
+
+    by_value = {}
+    for base in C.FAME_PIECES:
+        by_value.setdefault(C.TRACK_START[base], []).append(base)
+    for value in sorted(by_value):
+        bases = by_value[value]
+        x, y = C.track_cell(bases[0], value)
+        inner = []
+        labels = []
+        for base in bases:
+            xml, label = one(base)
+            inner.append(xml)
+            labels.append(label)
+        stacks.append(setup_stack('Fame %d: %s' % (value, ', '.join(labels)),
+                                  x, y, ''.join(inner)))
 
     # personnalites dans la zone de leur camp
     for e in setup['zones']:
@@ -336,8 +407,10 @@ def build():
         '<VASSAL.build.module.map.BoardPicker addColumnText="" addRowText="" '
         'boardPrompt="Choose game board" slotHeight="125" slotScale="0.2" slotWidth="350">'
         '<VASSAL.build.module.map.boardPicker.Board image="plan_de_jeu.jpg" name=%s '
-        'reversible="false" color="255,255,255" width="0" height="0"/>'
-        '</VASSAL.build.module.map.BoardPicker>' % quoteattr(BOARD_NAME),
+        'reversible="false" color="255,255,255" width="0" height="0">%s'
+        '</VASSAL.build.module.map.boardPicker.Board>'
+        '</VASSAL.build.module.map.BoardPicker>'
+        % (quoteattr(BOARD_NAME), zoned_grid()),
         '<VASSAL.build.module.map.StackMetrics bottom="8" disabled="false" exSepX="14" '
         'exSepY="20" left="8" right="8" top="8" unexSepX="8" unexSepY="18"/>',
         '<VASSAL.build.module.map.ForwardToKeyBuffer/>',
@@ -349,10 +422,27 @@ def build():
         '<VASSAL.build.module.map.HighlightLastMoved/>',
         '<VASSAL.build.module.map.StackExpander/>',
         '<VASSAL.build.module.map.Zoomer zoomLevels="0.4,0.55,0.75,1.0" zoomStart="2"/>',
-        '<VASSAL.build.module.map.CounterDetailViewer borderThickness="2" centerAll="false" '
-        'delay="300" description="Mouse-over piece viewer" display="true" fgColor="0,0,0" '
-        'bgColor="255,255,204" minDisplayPieces="1" showgraph="true" showgraphsingle="true" '
-        'showtext="true" zoomlevel="3.0" version="3"/>',
+        # Infobulle au survol. « display » n'est PAS un booleen : c'est le mode
+        # de selection des pieces, et sa valeur doit etre l'une des cinq
+        # chaines litterales de CounterDetailViewer (TOP_LAYER, ALL_LAYERS,
+        # INC_LAYERS, EXC_LAYERS, FILTER). Avec display="true", aucune
+        # branche ne correspondait et selectPiece() retournait false pour
+        # toutes les pieces : l'infobulle ne trouvait jamais rien a afficher.
+        # « version » doit valoir 4 (LATEST_VERSION) sans quoi l'editeur
+        # rejouerait upgrade() et ecraserait borderColor.
+        '<VASSAL.build.module.map.CounterDetailViewer version="4" '
+        'description="Mouse-over piece viewer" delay="300" hotkey="" '
+        'display="from top-most layer only" propertyFilter="" '
+        'minDisplayPieces="1" zoomlevel="1.0" graphicsZoom="2.0" '
+        'fgColor="0,0,0" bgColor="255,255,204" borderColor="90,70,40" '
+        'borderThickness="2" borderInnerThickness="2" borderWidth="6" '
+        'centerAll="false" centerText="true" centerPiecesVertically="true" '
+        'showgraph="true" showtext="true" enableHTML="true" fontSize="12" '
+        'summaryReportFormat="" counterReportFormat="$pieceName$" '
+        'emptyHexReportForma="" showOverlap="true" showNoStack="true" '
+        'showNonMovable="true" showMoveSelectde="true" '
+        'stretchWidthSummary="false" stretchWidthPieces="false" '
+        'showTerrainBeneath="never" stopAfterShowing="false"/>',
         # ImageSaver en dernier : c'est le seul bouton restant sur la barre
         # d'outils du plateau, place apres les boutons du module principal.
         '<VASSAL.build.module.map.ImageSaver/>',
@@ -363,7 +453,12 @@ def build():
                'edgeHeight="0" edgeWidth="0" hideKey="" highlightThickness="3" '
                'launch="false" moveKey="" moveToFormat="$pieceName$: $previousLocation$ -&gt; $location$" '
                'moveWithinFormat="$pieceName$: $previousLocation$ -&gt; $location$" '
-               'onlyReportChangedLocation="false" showKey="" thickness="3" '
+               # true : un deplacement n'est journalise que s'il change de
+               # case nommee. Hors des pistes le plateau n'a pas de grille,
+               # la position vaut toujours « Offboard », donc deplacer une
+               # personnalite ou un depute n'ecrit rien ; seuls les
+               # marqueurs qui changent de case de piste sont annonces.
+               'onlyReportChangedLocation="true" showKey="" thickness="3" '
                'buttonName="" icon="" tooltip="">%s%s</VASSAL.build.module.Map>'
                % (quoteattr(MAP_NAME), ''.join(map_parts), ''.join(stacks)))
 
@@ -462,8 +557,13 @@ def main():
             z.write(os.path.join(IMG, f), 'images/' + f)
         for f in sorted(os.listdir(PDF)):
             z.write(os.path.join(PDF, f), 'pdf/' + f)
-    print('%s  (%.1f Mo, %d emplacements de pions)'
-          % (out, os.path.getsize(out) / 1e6, b.gpid))
+    # b.gpid compte les identifiants distribues (un par exemplaire), pas les
+    # emplacements presents dans le fichier : un meme pion pose N fois sur le
+    # plateau consomme N identifiants pour un seul modele de palette.
+    print('%s  (%.1f Mo, %d emplacements, %d identifiants, %d cases de piste)'
+          % (out, os.path.getsize(out) / 1e6,
+             xml.count('<VASSAL.build.widget.PieceSlot'), b.gpid,
+             xml.count('.board.Region name=')))
 
 
 if __name__ == '__main__':

@@ -80,11 +80,29 @@ Corrections et ajouts demandés après relecture du premier module :
   pion « Secret Note » : `Hideable` (Ctrl+H masque/révèle, visible du seul
   camp qui l'a masqué) + `Labeler` éditable (clic droit « Edit Text »).
   Validé par test direct : masqué après un Ctrl+H, revisible après le second.
-- **Suivi en 1 clic + journal** pour les 4 pistes verticales (Économie,
-  Clergé, Coalition, Commune) et les 7 marqueurs de Fame : compteur
-  `DynamicProperty` borné 1–20, +1/+5/valeur directe, et un `ReportState`
-  qui écrit « Nom : valeur » dans le journal à chaque changement — validé par
-  simulation de touches (4 → 5 → 6 → 7, plafonne bien à 20).
+- **Pistes tracées sur le plateau, pas de chiffre sur le pion.** Les 4 pistes
+  verticales (Coalition, Clergé, Économie, Commune) et la piste de Fame sont
+  découpées en zones : 5 `Zone` portant chacune une `RegionGrid` de 20 régions
+  nommées « 1 » … « 20 ». La géométrie a été **mesurée sur le plateau** par
+  détection des traits de séparation (20 cases de 83,2 px de y=87,5 à
+  y=1751,5 pour les colonnes verticales ; 20 cases de 83,25 px de x=1018 à
+  x=2683 pour la rangée de Fame ; cases extrêmes recadrées pour vérifier
+  qu'elles portent bien « 1 » et « 20 »). Déplacer un marqueur d'une case à
+  l'autre écrit donc « Economy: Economy 4 → Economy 6 » dans le journal, sans
+  qu'aucun compteur ne s'affiche sur le pion. `snapto` cale le marqueur au
+  centre de la case.
+  La carte passe à `onlyReportChangedLocation="true"` : hors des pistes le
+  plateau n'a pas de grille, la position vaut toujours « Offboard », donc
+  déplacer une personnalité ou un député n'encombre pas le journal.
+- **Mise en place des marqueurs de piste au centre exact de leur case.**
+  Les positions issues du mod TTS étaient approximatives et rejetaient même
+  Sans-Culotte et Gouvernement sur une seconde rangée *sous* la piste de
+  Fame. Les 11 marqueurs sont maintenant posés par calcul ; les camps qui
+  partagent une valeur de départ (Royaliste et Sans-Culotte à 8, Marais et
+  Gouvernement à 10) sont réunis dans une **même `SetupStack`**, donc dans
+  une vraie pile sur la case.
+- **Étiquette « Government »** sur le compteur de trésorerie du
+  gouvernement, pour ne pas le confondre avec ceux des six courants.
 - **Non-suppression.** Les 11 pièces ci-dessus et les 31 personnalités n'ont
   plus de trait Delete.
 - **Menu contextuel des personnalités : Arrest / Guillotine.** Deux
@@ -98,8 +116,18 @@ Corrections et ajouts demandés après relecture du premier module :
 - **Barre d'outils** : Notes retirée, Save Text et Recenter retirés. Ordre
   confirmé dans le XML généré : Side, Pieces, 1d6, 2d6, Inventory, Charts,
   puis le plateau (dont Save Image est l'unique bouton restant) en dernier.
-- **Infobulle au survol** : zoom porté à 3× (au lieu de 1,5×, probablement
-  trop discret) et affichage du nom de la pièce activé.
+- **Bug corrigé — l'infobulle au survol ne s'affichait jamais.** L'attribut
+  `display` du `CounterDetailViewer` n'est pas un booléen : il porte le mode
+  de sélection des pièces et doit valoir l'une des cinq chaînes littérales du
+  composant (`from top-most layer only`, `from all layers`, …). Avec
+  `display="true"`, aucune branche de `selectPiece()` ne correspondait et la
+  méthode retombait sur son `return false` final : **toutes** les pièces
+  étaient rejetées, l'infobulle n'avait donc jamais rien à dessiner — ni les
+  réglages de zoom ni les préférences n'y pouvaient quoi que ce soit.
+  Corrigé en `display="from top-most layer only"`, avec `version="4"`
+  (`LATEST_VERSION`, sinon `upgrade()` écrase `borderColor` à la première
+  ouverture dans l'éditeur), le dessin de la pièce agrandi 2× et son nom
+  sous l'image.
 - **Interface entièrement en anglais** (boutons, onglets, propriétés,
   entrées de palette, mise en place, menu Help), à l'exception des six noms
   de courants et « assignat », qui sont le vocabulaire du jeu lui-même

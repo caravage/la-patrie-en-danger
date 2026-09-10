@@ -172,6 +172,74 @@ TRACK_START = {
     'renommee_royaliste': 8,
 }
 
+# --- Geometrie des pistes imprimees sur le plateau --------------------------
+# Mesuree directement sur assets/images/plan_de_jeu.jpg en detectant les
+# traits de separation des cases (balayage des pixels sombres) :
+#   * les 4 pistes verticales de gauche : 21 traits horizontaux de y=87.5 a
+#     y=1751.5, soit 20 cases de 83.2 px ; les colonnes utiles sont bornees
+#     par les traits verticaux x = 116 / 199.5 / 283.5 / 366 / 450 / 533 /
+#     617 / 700 (les colonnes intercalaires portent le titre vertical).
+#   * la piste de Fame : une seule rangee y = 2283.5..2367, 21 traits
+#     verticaux de x=1018 a x=2683, soit 20 cases de 83.25 px.
+# La case 1 est en haut (pistes verticales) / a gauche (Fame), verifie en
+# recadrant les cases extremes : elles portent bien "1" et "20".
+TRACK_ROW_TOP = 87.5          # bord superieur de la case 1 des pistes
+TRACK_ROW_PITCH = 83.2        # hauteur d'une case
+TRACK_COLUMNS = {             # piece -> (x gauche, x droite) de sa colonne
+    'coalition_piste': (116.0, 199.5),
+    'clerge':          (283.5, 366.0),
+    'economie':        (450.0, 533.0),
+    'commune_piste':   (617.0, 700.0),
+}
+FAME_COL_LEFT = 1018.0        # bord gauche de la case 1 de la piste de Fame
+FAME_COL_PITCH = 83.25        # largeur d'une case
+FAME_ROW = (2283.5, 2367.0)   # bords haut / bas de la rangee
+FAME_PIECES = [
+    'renommee_gouvernement', 'renommee_feuillant', 'renommee_gironde',
+    'renommee_montagne', 'renommee_sansculotte', 'renommee_marais',
+    'renommee_royaliste',
+]
+# Marge ajoutee autour d'une piste pour dessiner sa zone : un pion fait 92 px
+# de cote pour une case de 83, il deborde donc un peu ; la marge evite qu'un
+# pion pose legerement de travers tombe hors de la zone. Les colonnes sont
+# separees de 84 px, une marge de 20 px ne les fait pas se recouvrir.
+TRACK_ZONE_MARGIN = 20
+
+# Libelles anglais des zones ; ils apparaissent dans le journal, sous la forme
+# « <zone> <case> », p.ex. « Economy 6 ».
+TRACK_ZONE_NAMES = {
+    'coalition_piste': 'Coalition Armies',
+    'clerge': 'Dissident Clergy',
+    'economie': 'Economy',
+    'commune_piste': 'Commune of Paris',
+}
+FAME_ZONE_NAME = 'Fame'
+
+
+def track_cell(base, value):
+    """Centre en pixels de la case `value` (1-20) de la piste de `base`."""
+    if base in TRACK_COLUMNS:
+        x0, x1 = TRACK_COLUMNS[base]
+        return (int(round((x0 + x1) / 2.0)),
+                int(round(TRACK_ROW_TOP + (value - 0.5) * TRACK_ROW_PITCH)))
+    y0, y1 = FAME_ROW
+    return (int(round(FAME_COL_LEFT + (value - 0.5) * FAME_COL_PITCH)),
+            int(round((y0 + y1) / 2.0)))
+
+
+def track_zone_polygon(base):
+    """Rectangle englobant la piste, marge comprise : « x,y;x,y;... »."""
+    m = TRACK_ZONE_MARGIN
+    if base in TRACK_COLUMNS:
+        x0, x1 = TRACK_COLUMNS[base]
+        y0, y1 = TRACK_ROW_TOP, TRACK_ROW_TOP + TRACK_MAX * TRACK_ROW_PITCH
+    else:
+        x0 = FAME_COL_LEFT
+        x1 = FAME_COL_LEFT + TRACK_MAX * FAME_COL_PITCH
+        y0, y1 = FAME_ROW
+    pts = [(x0 - m, y0 - m), (x1 + m, y0 - m), (x1 + m, y1 + m), (x0 - m, y1 + m)]
+    return ';'.join('%d,%d' % (int(round(x)), int(round(y))) for x, y in pts)
+
 # Traduction des categories internes (filtrage des panneaux, cf. PIECES
 # ci-dessus) vers la valeur anglaise embarquee dans la propriete "Category"
 # des pions - celle que l'Inventaire affiche pour regrouper.
