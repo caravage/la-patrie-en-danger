@@ -178,6 +178,56 @@ Corrections et ajouts demandés après relecture du premier module :
   de courants et « assignat », qui sont le vocabulaire du jeu lui-même
   (utilisé tel quel dans les règles anglaises).
 
+## Version 3 : corrections de mise en place, notes vraiment privées
+
+- **Bug corrigé — un marqueur Feuillant en trop à Strasbourg.** Vérifié
+  contre les règles (§4.6, liste des régions par courant : « Feuillant :
+  Clermont, Dijon, Metz, Montpellier, Orléans, Rouen, Strasbourg et
+  Toulouse ») : la région Strasbourg ne doit porter qu'un seul marqueur de
+  contrôle. L'extraction du mod TTS en posait deux (confirmé visuellement :
+  les deux tombent bien dans le même contour imprimé). Le second est
+  écarté, à la fois dans `assets/setup.json` et dans `extract_setup()` (liste
+  `KNOWN_DUPLICATES`) pour qu'une future extraction reste corrigée. Un audit
+  plus large reste à faire : le décompte total des marqueurs de contrôle par
+  courant (36 posés) ne correspond pas à celui des règles (23 régions
+  nommées + Brest/Nîmes neutres + Bourges en révolte) ; ce n'est traité ici
+  que pour Strasbourg.
+- **Assemblée nationale : piles bien séparées, avec un marqueur de parti en
+  face.** Les six ancrages (`ASSEMBLY_ANCHORS`) étaient espacés d'à peine
+  ~123 px, alors qu'une pile hôte (Marais avec le Royaliste dissimulé, par
+  exemple) peut compter jusqu'à 12 pions et déborder sur sa voisine une fois
+  dépliée. Réespacés à ~148 px, dans les limites mesurées du cadre de la
+  gravure « Assemblée Nationale » (x=120 à 918). Un exemplaire du marqueur
+  de contrôle régional du même courant est posé juste au-dessus de chaque
+  pile visible (Gironde, Marais, Feuillant), pour l'identifier au premier
+  coup d'œil sans avoir à l'ouvrir.
+- **Notes des joueurs : vraiment privées, pas seulement « masquables ».**
+  Trois manques corrigés :
+  * Le texte n'était protégé qu'à moitié : `Obscurable` (accès `side:`)
+    n'empêchait que sa propre commande Hide/Reveal, pas le « Edit Text » du
+    `Labeler`, un trait indépendant. N'importe quel joueur pouvait donc
+    éditer la note d'un autre camp tant qu'elle n'avait pas encore été
+    masquée. Ajout du trait `Restricted` (« Accès restreint »), posé à
+    l'extérieur de tout le reste et fixé au camp propriétaire : lui seul
+    voit désormais la moindre commande sur sa note (vérifié contre
+    `VASSAL.counters.Restricted.java` - `getKeyCommands()` renvoie
+    `KeyCommand.NONE` pour tout autre camp).
+  * La note naissait visible par défaut (état `null`) et n'était masquée
+    qu'après un premier Ctrl+H : `Obscurable` prend maintenant directement
+    l'état « masquée par son propriétaire » dès la mise en place
+    (`masked_by=<parti>`), donc son texte n'est jamais exposé avant que le
+    joueur n'écrive quoi que ce soit.
+  * Chaque note a maintenant un `ReportState` qui annonce dans le journal
+    « <Parti> Note was edited » à chaque Ctrl+E, sans jamais faire fuiter le
+    texte lui-même (le format ne cite que `$PieceName$`).
+  * Le texte « Secret Note » imprimé sur le pion est retiré ; à la place,
+    une étiquette fixe donne le nom du parti propriétaire, dessinée
+    par-dessus (même principe que « Government » sur la trésorerie) - donc
+    toujours visible de tous, y compris quand le texte est masqué.
+  * Validé par un test Java direct (masquage par défaut, commandes
+    invisibles avant d'avoir rejoint le bon camp, aucune commande visible
+    sur la note d'un autre camp, format du rapport sans fuite).
+
 ## Note technique
 
 `tools/vassal_encode.py` reproduit fidèlement `VASSAL.tools.SequenceEncoder`.

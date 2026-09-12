@@ -36,6 +36,7 @@ DEPUTY_VALUE_KEY = V.keystroke(86)  # Ctrl+V : change a deputy's value
 ARREST_KEY = V.keystroke(65)    # Ctrl+A : Arrest
 GUILLOTINE_KEY = V.keystroke(71)  # Ctrl+G : Guillotine
 HIDE_KEY = V.keystroke(72)      # Ctrl+H : Hide/Reveal a secret note
+EDIT_NOTE_KEY = V.keystroke(69)  # Ctrl+E : Edit Text on a secret note
 
 TREASURY_COMMANDS = [
     ('+ 50', V.keystroke(49), ('I', 50)),
@@ -215,30 +216,49 @@ class Builder:
                   V.basic_piece(image, label, gpid)]
         return gpid, V.build_piece(traits), self.size_of(image)
 
-    def secret_note(self):
-        """Note : le pion reste visible de tous, mais son texte ne l'est pas.
+    def secret_note(self, current):
+        """Note d'un camp : visible de tous, mais son texte n'est lisible que
+        par ce camp.
 
         Obscurable (et non Hideable, qui escamotait la piece entiere) avec le
         style d'affichage 'G' : les autres joueurs voient la fiche vierge a la
-        place du contenu reel. Le trait est place a l'exterieur de l'etiquette,
-        donc c'est bien le texte qui disparait. Seul le camp qui a masque la
-        note peut la reveler (access='side:'). Aucun texte par defaut : la
-        fiche est vierge tant que le joueur n'a rien ecrit."""
+        place du contenu reel. `masked_by=current` la fait naitre DEJA
+        masquee : le texte n'est jamais expose avant que son proprietaire
+        n'ecrive quoi que ce soit.
+
+        Ca ne suffit pas a proteger l'edition : Obscurable ne protege QUE sa
+        propre commande Hide/Reveal, pas le "Edit Text" du Labeler qui est un
+        trait independant. Restricted, place a l'exterieur des deux, bloque
+        TOUTES les commandes (edition comprise) pour tout camp qui n'est pas
+        `current` (verifie contre VASSAL.counters.Restricted.java) : lui seul
+        peut donc lire, ecrire ou masquer/reveler sa propre note.
+
+        Le nom du parti est une etiquette fixe, meme principe que
+        « Government » sur la tresorerie : dessinee par-dessus, toujours
+        visible de tous (Restricted ne bloque que les commandes, jamais
+        l'affichage)."""
         gpid = self.next_gpid()
-        label = 'Note'
+        label = '%s Note' % current
         image = 'note_blank.png'
         traits = [
+            V.labeler(current, font_size=22, bg='255,255,255',
+                      v_pos='t', v_off=18, description='Owning party'),
+            V.restricted([current],
+                        description='Only this party may read, edit or mask/reveal this note'),
+            V.report_state([EDIT_NOTE_KEY], '$PieceName$ was edited',
+                           description='Report note edits'),
             V.obscurable(HIDE_KEY, image, command='Hide/Reveal text',
-                         access='side:', description='Secret note visibility'),
+                         access='side:', masked_by=current, mask_name=current,
+                         description='Secret note visibility'),
             V.labeler('', font_size=13, fg='70,55,35',
-                      label_key=V.keystroke(69), menu_command='Edit Text',
+                      label_key=EDIT_NOTE_KEY, menu_command='Edit Text',
                       property_name='TextLabel',
                       description='Secret note text'),
             V.delete(),
-            V.marker(['Category'], ['Note']),
+            V.marker(['Category', 'Current'], ['Note', current]),
             V.basic_piece(image, label, gpid),
         ]
-        return gpid, V.build_piece(traits), self.size_of(image)
+        return gpid, V.build_piece(traits), self.size_of(image), label
 
 
 def slot(entry_name, gpid, definition, size):
@@ -328,8 +348,9 @@ def build():
                                       title='Government')
     defs['tresorerie_gouvernement'] = (gpid, d, size, label, 'treasury')
 
-    gpid, d, size = b.secret_note()
-    defs['secret_note'] = (gpid, d, size, 'Note', 'note')
+    for cur in C.CURRENTS:
+        gpid, d, size, label = b.secret_note(cur)
+        defs['note_' + C.CURRENT_SLUG[cur]] = (gpid, d, size, label, 'note')
 
     # ---- palette --------------------------------------------------------
     def panel(title, bases, cols=6):
@@ -356,7 +377,7 @@ def build():
     panels.append(panel('Treasury', ['assignat_50']
                         + ['tresorerie_' + C.CURRENT_SLUG[c] for c in C.CURRENTS]
                         + ['tresorerie_gouvernement'], 4))
-    panels.append(panel('Notes', ['secret_note'], 1))
+    panels.append(panel('Notes', ['note_' + C.CURRENT_SLUG[c] for c in C.CURRENTS], 3))
     palette = ('<VASSAL.build.module.PieceWindow name="Pieces" text="Pieces" '
                'tooltip="Open the pieces palette" hidden="false" scale="1.0" '
                'defaultWidth="0" hotkey="">'
@@ -439,7 +460,7 @@ def build():
     # gauche par rapport au compteur pour ne pas passer sous la caisse du
     # Gouvernement, qui reste ou elle est.
     for i, cur in enumerate(C.CURRENTS):
-        place('secret_note', i * col_w + col_w - 250, board_h + 374,
+        place('note_' + C.CURRENT_SLUG[cur], i * col_w + col_w - 250, board_h + 374,
               name='Note %s' % cur)
 
     # Assemblee nationale : composition des regles §4.5, en pions de valeur.
@@ -478,6 +499,12 @@ def build():
         name = ('Assembly: %s (%d)' % (cur, total) if not hidden else
                 'Assembly: %s (%d) + hidden %s' % (cur, total, ', '.join(hidden)))
         stacks.append(setup_stack(name, ax, ay, ''.join(inner)))
+        # marqueur de parti pose en face de la pile, pour l'identifier au
+        # premier coup d'oeil (les 6 piles ne portent aucun nom imprime sur
+        # le plateau) : un exemplaire du marqueur de controle regional de ce
+        # meme courant, dans sa propre pile juste au-dessus.
+        flag, flag_label = one('marqueur_' + C.CURRENT_SLUG[cur])
+        stacks.append(setup_stack('%s (Assembly marker)' % flag_label, ax, ay - 130, flag))
 
     # ---- carte ----------------------------------------------------------
     map_parts = [

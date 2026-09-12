@@ -247,14 +247,20 @@ def hideable(hide_key, command='Hide/Reveal', bg='0,0,0', access='side:',
 
 
 def obscurable(hide_key, mask_image, command='Mask', access='side:',
-               mask_name='', description=''):
+               mask_name='', description='', masked_by=None):
     """Obscurable (« Masquer ») : contrairement a Hideable, la piece reste
     VISIBLE des autres joueurs, mais ils en voient `mask_image` au lieu de son
     contenu reel. C'est ce que donne le style d'affichage 'G' (IMAGE) de
     Obscurable.mySetType() : le champ 4 vaut 'G' suivi du nom de l'image.
 
-    access='side:' : seul le camp qui a masque la piece peut la reveler.
-    Etat : 'null;' = non masquee ; sinon le camp qui la masque."""
+    access='side:' : seul le camp qui a masque la piece peut la reveler
+    (VASSAL.counters.SideAccess.currentPlayerHasAccess/currentPlayerCanModify :
+    verifie contre le code source).
+    masked_by : si fourni (nom de camp), la piece nait DEJA masquee pour tous
+    les autres camps - au lieu de naitre visible et d'attendre qu'un joueur
+    appuie sur `hide_key`. Etat : 'null;' = non masquee ; sinon le camp qui
+    la masque (Obscurable.mySetState/myGetState : verifie contre le code
+    source)."""
     fields = [
         hide_key,               # 1  touche de masquage
         mask_image,             # 2  image vue quand un AUTRE camp l'a masquee
@@ -268,7 +274,21 @@ def obscurable(hide_key, mask_image, command='Mask', access='side:',
         '',                     # 10 touche de distribution
         '',                     # 11 expression de distribution
     ]
-    return Trait('obs;' + seq(';', *fields), seq(';', 'null', ''))
+    return Trait('obs;' + seq(';', *fields), seq(';', masked_by or 'null', ''))
+
+
+def restricted(sides, restrict_by_player=False, restrict_movement=True, description=''):
+    """Restricted (« Acces restreint ») : seul un joueur d'un des camps de
+    `sides` peut agir sur la piece. Place comme trait le plus EXTERIEUR de
+    tous ceux qu'il doit proteger : Restricted.getKeyCommands() renvoie
+    KeyCommand.NONE pour tout autre camp, ce qui masque d'un coup les
+    commandes de TOUS les traits interieurs (Obscurable, Labeler, etc.), et
+    Restricted.keyEvent() renvoie null sans meme transmettre la touche aux
+    traits interieurs (verifie contre VASSAL.counters.Restricted.java).
+    restrict_movement=True empeche en plus tout autre camp de deplacer la
+    piece a la souris."""
+    fields = [string_array(sides), restrict_by_player, restrict_movement, description]
+    return Trait('restrict;' + seq(';', *fields), '')
 
 
 def send_to_location(command, key, x, y, map_name, board_name,

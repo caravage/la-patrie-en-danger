@@ -144,7 +144,18 @@ def extract_setup(ttsmod, index):
         if 0 <= px < w and 0 <= py < h:
             on_board.append({'piece': base, 'x': px, 'y': py})
     on_board.sort(key=lambda e: (e['piece'], e['y'], e['x']))
+    on_board = [e for e in on_board if (e['piece'], e['x'], e['y']) not in KNOWN_DUPLICATES]
     return on_board
+
+
+# Objets du mod TTS qui font clairement double emploi avec un autre : verifie
+# contre les regles (§4.6, liste des regions par courant) et contre le
+# plateau imprime. Un second marqueur "Feuillant Control" tombait dans la
+# region Strasbourg (qui n'en compte qu'un seul), a ~170 px de son voisin
+# legitime pres du texte "Wurmser" ; il est ecarte ici plutot que garde.
+KNOWN_DUPLICATES = {
+    ('marqueur_feuillant', 2803, 789),
+}
 
 
 def player_zone_setup(board_h, board_w):
@@ -171,23 +182,16 @@ def player_zone_setup(board_h, board_w):
 
 
 def render_note_card():
-    """Genere l'image du pion « Secret Note » (piece masquable a texte libre)."""
-    from PIL import ImageFont
+    """Genere l'image du pion « note secrete » (piece masquable a texte libre).
+
+    Vierge de tout texte : le nom du parti proprietaire est ajoute par un
+    Labeler dans build_module.py (meme style que l'etiquette « Government »
+    sur la tresorerie), pas cuit dans l'image."""
     W, H = 220, 150
     im = Image.new('RGB', (W, H), (245, 238, 220))
     d = ImageDraw.Draw(im)
     d.rectangle([2, 2, W - 3, H - 3], outline=(120, 100, 70), width=3)
     d.rectangle([8, 8, W - 9, H - 9], outline=(170, 150, 110), width=1)
-    try:
-        font = ImageFont.truetype(
-            '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf', 15)
-    except Exception:
-        font = ImageFont.load_default()
-    text = 'Secret Note'
-    bbox = d.textbbox((0, 0), text, font=font)
-    d.text(((W - (bbox[2] - bbox[0])) // 2,
-            (H - (bbox[3] - bbox[1])) // 2 - bbox[1]), text,
-           fill=(110, 90, 60), font=font)
     im.save(os.path.join(IMG, 'note_blank.png'), optimize=True)
     return [('note_blank.png', im.size)]
 
