@@ -264,6 +264,29 @@ Corrections et ajouts demandés après relecture du premier module :
   restent nécessaires à la reconstruction des fenêtres Charts et Events
   (rendues en images), donc conservés dans `assets/pdf/`.
 
+## Version 5 : nouvelle traduction des événements aléatoires
+
+- **Table des événements remplacée par la version 7** de la traduction
+  (fournie par l'utilisateur : `assets/pdf/random_events_v7.pdf`, conservée
+  à part - ce n'est pas un fichier extrait du mod TTS, `build_assets.py` ne
+  doit donc jamais l'écraser). 24 pages au lieu de 9 : un sommaire (non
+  repris), une page de clarifications, dix régimes de deux pages chacun
+  (quatre "historiques" déjà présents - Legislative, Convention, Terror,
+  **Thermidor** qui remplace l'ancien intitulé « First Republic » - et six
+  tirés des règles optionnelles §4.1, absents jusqu'ici : Mercy, Dread,
+  Directorate, Prairial, Federal First Republic, First Republic One &
+  Indivisible), puis deux pages de notes du traducteur (au lieu d'une).
+- **Nouvel onglet « Clarifications »**, à gauche de « Legislative » : les
+  règles à retenir en tirant un événement, et comment lire le document
+  (conditions entre parenthèses, personnages soulignés, événements à usage
+  unique soulignés, termes en gras).
+- **Régimes optionnels préfixés `(Opt.)`** dans leur onglet (ex.
+  « (Opt.) Prairial ») pour les distinguer des quatre régimes du scénario
+  historique, déjà présents.
+- Même découpage par onglet que la version précédente, conservé à
+  l'identique : chaque régime garde ses deux sous-onglets « Economy &
+  Politics » / « Counter-Revolution & Commune », un par page du PDF.
+
 ## Note technique
 
 `tools/vassal_encode.py` reproduit fidèlement `VASSAL.tools.SequenceEncoder`.

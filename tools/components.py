@@ -403,21 +403,41 @@ CHARTS = [
 ]
 
 # La table des evenements aleatoires, dans sa propre fenetre (bouton place
-# avant celui des Charts). Le document en compte 9 pages : quatre regimes de
-# deux pages chacun, plus les notes du traducteur. Les rubriques de chaque
-# page ont ete relevees dans le PDF (ECONOMY / POLITICS d'un cote,
-# COUNTER-REVOLUTION / PARIS COMMUNE de l'autre).
-EVENTS_SRC = 'evenements_aleatoires_en'
+# avant celui des Charts). Version 7 de la traduction (fournie par
+# l'utilisateur, PAS extraite du mod TTS - conservee a part dans
+# assets/pdf/random_events_v7.pdf, jamais ecrasee par build_assets.py).
+# 24 pages : sommaire, clarifications, dix regimes de deux pages chacun
+# (quatre "historiques" - regles §4.1 - et six des regles optionnelles,
+# prefixes "(Opt.)"), puis deux pages de notes du traducteur. Chaque regime
+# se lit sur deux pages : ECONOMY + POLITICS d'un cote, COUNTER-REVOLUTION +
+# PARIS COMMUNE de l'autre - releve dans le PDF, page par page.
+EVENTS_SRC = 'random_events_v7'
 EVENTS = [
-    (EVENTS_SRC, 'Legislative',        [(1, 'Economy & Politics'),
-                                        (2, 'Counter-Revolution & Commune')]),
-    (EVENTS_SRC, 'Convention',         [(3, 'Economy & Politics'),
+    (EVENTS_SRC, 'Clarifications',     [(2, None)]),
+    (EVENTS_SRC, 'Legislative',        [(3, 'Economy & Politics'),
                                         (4, 'Counter-Revolution & Commune')]),
-    (EVENTS_SRC, 'Terror',             [(5, 'Economy & Politics'),
+    (EVENTS_SRC, 'Convention',         [(5, 'Economy & Politics'),
                                         (6, 'Counter-Revolution & Commune')]),
-    (EVENTS_SRC, 'First Republic',     [(7, 'Economy & Politics'),
+    (EVENTS_SRC, 'Terror',             [(7, 'Economy & Politics'),
                                         (8, 'Counter-Revolution & Commune')]),
-    (EVENTS_SRC, 'Translation Notes',  [(9, None)]),
+    (EVENTS_SRC, 'Thermidor',          [(9, 'Economy & Politics'),
+                                        (10, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, '(Opt.) Mercy',       [(11, 'Economy & Politics'),
+                                        (12, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, '(Opt.) Dread',       [(13, 'Economy & Politics'),
+                                        (14, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, '(Opt.) Directorate', [(15, 'Economy & Politics'),
+                                        (16, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, '(Opt.) Prairial',    [(17, 'Economy & Politics'),
+                                        (18, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, '(Opt.) Federal First Republic',
+                                        [(19, 'Economy & Politics'),
+                                        (20, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, '(Opt.) First Republic, One & Indivisible',
+                                        [(21, 'Economy & Politics'),
+                                        (22, 'Counter-Revolution & Commune')]),
+    (EVENTS_SRC, 'Translation Notes',  [(23, 'Intent & Errata'),
+                                        (24, 'Errata (cont.)')]),
 ]
 CHART_DPI = 150
 
