@@ -193,7 +193,17 @@ def render_note_card():
     d.rectangle([2, 2, W - 3, H - 3], outline=(120, 100, 70), width=3)
     d.rectangle([8, 8, W - 9, H - 9], outline=(170, 150, 110), width=1)
     im.save(os.path.join(IMG, 'note_blank.png'), optimize=True)
-    return [('note_blank.png', im.size)]
+
+    # Liseret rouge : superpose a la note quand elle est masquee (propriete
+    # ObscuredToOthers), quel que soit qui regarde. Transparent partout sauf
+    # le cadre, pour ne recouvrir ni le texte (visible du proprietaire) ni la
+    # fiche vierge (visible des autres) qui se trouvent dessous.
+    border = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(border)
+    bd.rectangle([2, 2, W - 3, H - 3], outline=(200, 20, 20, 255), width=5)
+    border.save(os.path.join(IMG, 'note_hidden_border.png'), optimize=True)
+
+    return [('note_blank.png', im.size), ('note_hidden_border.png', border.size)]
 
 
 def render_charts():

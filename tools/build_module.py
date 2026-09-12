@@ -249,13 +249,28 @@ class Builder:
         Le nom du parti est une etiquette fixe, meme principe que
         « Government » sur la tresorerie : dessinee par-dessus, toujours
         visible de tous (Restricted ne bloque que les commandes, jamais
-        l'affichage)."""
+        l'affichage).
+
+        Liseret rouge quand la note est masquee (Obscurable ne change
+        l'apparence QUE pour un joueur sans acces ; son proprietaire voit
+        toujours le meme pion, masque ou non, et n'avait donc aucun moyen de
+        savoir d'un coup d'oeil si sa note etait actuellement scellee). Une
+        couche a 2 niveaux suit la propriete `ObscuredToOthers` (booleenne,
+        exposee par Obscurable - verifie contre VASSAL.counters.Properties)
+        via une expression BeanShell, meme technique que pour la face des
+        deputes : niveau 1 = rien, niveau 2 = cadre rouge. Dessinee pour tout
+        le monde (une couche ne connait pas le camp du spectateur), ce qui
+        convient : que la note soit scellee n'est pas un secret, seul son
+        texte l'est."""
         gpid = self.next_gpid()
         label = '%s Note' % current
         image = 'note_blank.png'
         traits = [
             V.labeler(current, font_size=22, bg='255,255,255',
                       v_pos='t', v_off=18, description='Owning party'),
+            V.layer(['', 'note_hidden_border.png'], ['Visible', 'Hidden'], '', '',
+                    layer_name='HiddenMark', description='Red border while hidden',
+                    follow_property='{ObscuredToOthers ? 2 : 1}'),
             V.restricted([current],
                         description='Only this party may read, edit or mask/reveal this note'),
             V.report_state([EDIT_NOTE_KEY], '$PieceName$ was edited',
@@ -512,12 +527,6 @@ def build():
         name = ('Assembly: %s (%d)' % (cur, total) if not hidden else
                 'Assembly: %s (%d) + hidden %s' % (cur, total, ', '.join(hidden)))
         stacks.append(setup_stack(name, ax, ay, ''.join(inner)))
-        # marqueur de parti pose en face de la pile, pour l'identifier au
-        # premier coup d'oeil (les 6 piles ne portent aucun nom imprime sur
-        # le plateau) : un exemplaire du marqueur de controle regional de ce
-        # meme courant, dans sa propre pile juste au-dessus.
-        flag, flag_label = one('marqueur_' + C.CURRENT_SLUG[cur])
-        stacks.append(setup_stack('%s (Assembly marker)' % flag_label, ax, ay - 130, flag))
 
     # ---- carte ----------------------------------------------------------
     map_parts = [

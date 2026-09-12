@@ -197,17 +197,8 @@ Corrections et ajouts demandés après relecture du premier module :
   courant (36 posés) ne correspond pas à celui des règles (23 régions
   nommées + Brest/Nîmes neutres + Bourges en révolte) ; ce n'est traité ici
   que pour Strasbourg.
-- **Assemblée nationale : piles bien séparées, avec un marqueur de parti en
-  face.** Les six ancrages (`ASSEMBLY_ANCHORS`) étaient espacés d'à peine
-  ~123 px, alors qu'une pile hôte (Marais avec le Royaliste dissimulé, par
-  exemple) peut compter jusqu'à 12 pions et déborder sur sa voisine une fois
-  dépliée. Réespacés à ~148 px, dans les limites mesurées du cadre de la
-  gravure « Assemblée Nationale » (x=120 à 918). Un exemplaire du marqueur
-  de contrôle régional du même courant est posé juste au-dessus de chaque
-  pile visible (Gironde, Marais, Feuillant), pour l'identifier au premier
-  coup d'œil sans avoir à l'ouvrir.
 - **Notes des joueurs : vraiment privées, pas seulement « masquables ».**
-  Trois manques corrigés :
+  Quatre manques corrigés :
   * Le texte n'était protégé qu'à moitié : `Obscurable` (accès `side:`)
     n'empêchait que sa propre commande Hide/Reveal, pas le « Edit Text » du
     `Labeler`, un trait indépendant. N'importe quel joueur pouvait donc
@@ -229,6 +220,19 @@ Corrections et ajouts demandés après relecture du premier module :
     une étiquette fixe donne le nom du parti propriétaire, dessinée
     par-dessus (même principe que « Government » sur la trésorerie) - donc
     toujours visible de tous, y compris quand le texte est masqué.
+  * **Liseret rouge quand la note est scellée.** `Obscurable` ne change
+    l'apparence que pour un joueur SANS accès : son propriétaire voyait donc
+    toujours le même pion, masqué ou non, sans moyen de savoir d'un coup
+    d'œil si sa note était actuellement scellée pour les autres. Une couche
+    (`Embellishment`) à 2 niveaux suit la propriété booléenne
+    `ObscuredToOthers` via une expression BeanShell
+    (`{ObscuredToOthers ? 2 : 1}`, même technique que pour la face des
+    députés) : niveau 1 = rien, niveau 2 = cadre rouge superposé. Dessinée
+    pour tout le monde (une couche ne connaît pas le camp du spectateur), ce
+    qui convient : que la note soit scellée n'est pas un secret, seul son
+    texte l'est. Le propriétaire voit donc son propre texte avec le liseret
+    tant qu'il n'a pas révélé la note ; les autres voient la fiche vierge,
+    avec le même liseret.
   * Validé par un test Java direct (masquage par défaut, commandes
     invisibles avant d'avoir rejoint le bon camp, aucune commande visible
     sur la note d'un autre camp, format du rapport sans fuite).

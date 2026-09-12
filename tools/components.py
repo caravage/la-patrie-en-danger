@@ -358,18 +358,12 @@ ASSEMBLY_HOST = {
     'Sans-Culotte': 'Gironde',
 }
 
-# Ancrages des six colonnes de l'Assemblee, en pixels du plateau. Espaces de
-# ~148 px (au lieu des ~123 px releves sur la mise en place du mod TTS) : une
-# pile hote peut recevoir jusqu'a 12 pions une fois les courants dissimules
-# ajoutes (Marais 10 + Royaliste 2), et se deployait par-dessus sa voisine
-# avec l'espacement d'origine (StackMetrics exSepX=14, jusqu'a 168 px).
-# Bornes x=150..890 : cadre de la gravure « Assemblee Nationale » mesure a
-# x=120..918 (detection des traits sombres du cadre), marge de 30 px pour ne
-# pas empieter dessus.
+# Ancrages des six colonnes de l'Assemblee, en pixels du plateau
+# (releves sur la mise en place du mod TTS).
 ASSEMBLY_ANCHORS = {
-    'Sans-Culotte': (150, 2185), 'Montagne': (298, 2185),
-    'Gironde': (446, 2185), 'Marais': (594, 2185),
-    'Feuillant': (742, 2185), 'Royaliste': (890, 2185),
+    'Sans-Culotte': (232, 2185), 'Montagne': (354, 2185),
+    'Gironde': (475, 2187), 'Marais': (599, 2182),
+    'Feuillant': (724, 2186), 'Royaliste': (844, 2185),
 }
 
 # --- Tresorerie de depart (regles §4.6), en livres --------------------------
