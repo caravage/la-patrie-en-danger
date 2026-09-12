@@ -247,11 +247,11 @@ def hideable(hide_key, command='Hide/Reveal', bg='0,0,0', access='side:',
 
 
 def obscurable(hide_key, mask_image, command='Mask', access='side:',
-               mask_name='', description='', masked_by=None):
+               mask_name='', description='', masked_by=None,
+               peek_key=None, peek_command=''):
     """Obscurable (« Masquer ») : contrairement a Hideable, la piece reste
     VISIBLE des autres joueurs, mais ils en voient `mask_image` au lieu de son
-    contenu reel. C'est ce que donne le style d'affichage 'G' (IMAGE) de
-    Obscurable.mySetType() : le champ 4 vaut 'G' suivi du nom de l'image.
+    contenu reel.
 
     access='side:' : seul le camp qui a masque la piece peut la reveler
     (VASSAL.counters.SideAccess.currentPlayerHasAccess/currentPlayerCanModify :
@@ -260,15 +260,31 @@ def obscurable(hide_key, mask_image, command='Mask', access='side:',
     les autres camps - au lieu de naitre visible et d'attendre qu'un joueur
     appuie sur `hide_key`. Etat : 'null;' = non masquee ; sinon le camp qui
     la masque (Obscurable.mySetState/myGetState : verifie contre le code
-    source)."""
+    source).
+
+    peek_key : un caractere (ex. 'P'), active le style d'affichage 'P' (Peek)
+    au lieu de 'G' (Image). Difference verifiee dans Obscurable.draw() /
+    drawObscuredToOthers() :
+      - style 'G' : le proprietaire voit `piece.draw()` (le vrai contenu)
+        PUIS `mask_image` par-dessus, A LA MEME TAILLE -> l'image de
+        masquage RECOUVRE visuellement le contenu, y compris pour lui.
+      - style 'P' : le proprietaire ne voit PAR DEFAUT que `mask_image`
+        (comme tout le monde), et ne voit le vrai contenu qu'en appuyant sur
+        `peek_key` PENDANT que la piece est selectionnee (`peeking=true`
+        dans myKeyEvent) ; ca redevient cache des qu'elle est deselectionnee.
+    La commande Peek n'apparait dans le menu contextuel que pour qui peut
+    demasquer la piece (Obscurable.myGetKeyCommands() : le meme controle
+    d'acces `isMaskable()` que pour Hide/Reveal, pas besoin d'un Restricted
+    en plus pour ca)."""
     fields = [
         hide_key,               # 1  touche de masquage
         mask_image,             # 2  image vue quand un AUTRE camp l'a masquee
         command,                # 3  libelle du menu contextuel
-        'G' + mask_image,       # 4  style d'affichage + image vue par les autres
+        # 4  style d'affichage (+ le complement qu'il attend)
+        ('P' + peek_key) if peek_key else ('G' + mask_image),
         mask_name,              # 5  nom affiche quand masquee
         access,                 # 6  qui peut demasquer
-        '',                     # 7  commande « jeter un oeil » (inutile en 'G')
+        peek_command,           # 7  libelle du menu « jeter un oeil » (style 'P' seulement)
         description,            # 8  description
         False,                  # 9  revelation auto au survol
         '',                     # 10 touche de distribution

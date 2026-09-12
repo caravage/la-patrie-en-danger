@@ -50,6 +50,7 @@ ARREST_KEY = V.keystroke(65)    # Ctrl+A : Arrest
 GUILLOTINE_KEY = V.keystroke(71)  # Ctrl+G : Guillotine
 HIDE_KEY = V.keystroke(72)      # Ctrl+H : Hide/Reveal a secret note
 EDIT_NOTE_KEY = V.keystroke(69)  # Ctrl+E : Edit Text on a secret note
+PEEK_KEY = 'P'                  # Ctrl+P : Peek at a hidden secret note (owner only)
 
 TREASURY_COMMANDS = [
     ('+ 50', V.keystroke(49), ('I', 50)),
@@ -234,10 +235,16 @@ class Builder:
         par ce camp.
 
         Obscurable (et non Hideable, qui escamotait la piece entiere) avec le
-        style d'affichage 'G' : les autres joueurs voient la fiche vierge a la
-        place du contenu reel. `masked_by=current` la fait naitre DEJA
-        masquee : le texte n'est jamais expose avant que son proprietaire
-        n'ecrive quoi que ce soit.
+        style d'affichage 'P' (Peek) : les autres joueurs voient la fiche
+        vierge a la place du contenu reel, ET le proprietaire aussi PAR
+        DEFAUT une fois la note masquee - meme lui doit appuyer sur Ctrl+P
+        (piece selectionnee) pour revoir son propre texte, le temps de la
+        selection. Le style 'G' (Image) essaye plus tot faisait le contraire
+        (contenu reel + image de masquage superposee A LA MEME TAILLE, donc
+        le proprietaire ne voyait PLUS SON TEXTE DU TOUT - bug de rendu
+        verifie dans Obscurable.drawObscuredToOthers()). `masked_by=current`
+        fait naitre la note DEJA masquee : le texte n'est jamais expose avant
+        que son proprietaire n'ecrive quoi que ce soit.
 
         Ca ne suffit pas a proteger l'edition : Obscurable ne protege QUE sa
         propre commande Hide/Reveal, pas le "Edit Text" du Labeler qui est un
@@ -277,6 +284,7 @@ class Builder:
                            description='Report note edits'),
             V.obscurable(HIDE_KEY, image, command='Hide/Reveal text',
                          access='side:', masked_by=current, mask_name=current,
+                         peek_key=PEEK_KEY, peek_command='Peek at my note',
                          description='Secret note visibility'),
             V.labeler('', font_size=13, fg='70,55,35',
                       label_key=EDIT_NOTE_KEY, menu_command='Edit Text',
@@ -616,11 +624,8 @@ def build():
     events = chart_window('Events', 'Random events table', C.EVENTS)
     charts = chart_window('Charts', 'Reference charts', C.CHARTS)
 
-    # ---- menu Help : les 11 PDF -------------------------------------------
-    docs = ''.join(
-        '<VASSAL.build.module.documentation.BrowserPDFFile pdfFile=%s title=%s/>'
-        % (quoteattr('pdf/%s.pdf' % name), quoteattr(title))
-        for _tail, name, title in C.PDFS)
+    # ---- menu Help : aucun document (les PDF ne sont plus proposes) -------
+    docs = ''
 
     roster = ('<VASSAL.build.module.PlayerRoster buttonText="Side" '
               'buttonTooltip="Choose or change side" icon="" buttonKeyStroke="">%s'
@@ -700,8 +705,8 @@ def main():
         z.writestr('moduledata', moduledata.encode('utf-8'))
         for f in sorted(os.listdir(IMG)):
             z.write(os.path.join(IMG, f), 'images/' + f)
-        for f in sorted(os.listdir(PDF)):
-            z.write(os.path.join(PDF, f), 'pdf/' + f)
+        # les PDF ne sont plus reference (menu Help vide) : ne plus les
+        # inclure dans le module evite ~1.6 Mo de poids mort.
     # b.gpid compte les identifiants distribues (un par exemplaire), pas les
     # emplacements presents dans le fichier : un meme pion pose N fois sur le
     # plateau consomme N identifiants pour un seul modele de palette.

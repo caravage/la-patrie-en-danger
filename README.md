@@ -23,10 +23,9 @@ mise en place ; les joueurs appliquent les règles eux‑mêmes.
 * **Fenêtre « Aides de jeu »** consultable sans quitter VASSAL : Personality
   Actions, Regional Actions, The Laws, Regime Cycles, et une page par courant
   pour les Factions (en anglais).
-* **11 aides de jeu PDF** dans le menu Aide, dont les règles complètes et les
-  événements aléatoires (FR et EN), qui s'ouvrent dans le lecteur du système.
-* **Notes différées** (menu Notes) : chacun peut écrire une promesse secrète,
-  visible de tous seulement une fois révélée.
+* **Notes secrètes**, une par camp, posées dans sa zone joueur : chacun peut
+  y écrire une promesse, illisible des autres tant qu'elle reste masquée,
+  et qu'il peut relire lui-même à tout moment par un « Peek » (Ctrl+P).
 * Boutons de dés 1d6 et 2d6, sélecteur de camp, inventaire.
 
 ## Mise en place
@@ -236,6 +235,34 @@ Corrections et ajouts demandés après relecture du premier module :
   * Validé par un test Java direct (masquage par défaut, commandes
     invisibles avant d'avoir rejoint le bon camp, aucune commande visible
     sur la note d'un autre camp, format du rapport sans fuite).
+
+## Version 4 : Peek sur les notes, menu Aide vidé
+
+- **Bug corrigé — la note masquée redevenait illisible pour son propre
+  propriétaire.** Le style d'affichage `'G'` (Image) d'`Obscurable` dessine,
+  pour qui a accès à la pièce (donc son propriétaire), le vrai contenu
+  **puis** l'image de masquage **par-dessus, à la même taille**
+  (`Obscurable.drawObscuredToOthers()`, cas `IMAGE`) : l'image vierge
+  recouvrait donc le texte à l'écran, alors que la donnée elle-même restait
+  correcte (`OBSCURED_TO_ME` valait bien `false`) - un bug de rendu, pas
+  d'accès, invisible aux tests qui ne vérifient que les propriétés.
+  Confirmé au préalable par un prototype minimal isolé (2 joueurs, 2 notes,
+  rien d'autre) avant de toucher au module complet.
+- **Peek (Ctrl+P), réservé au propriétaire.** Remplace le style `'G'` par le
+  style `'P'` (Peek), lui aussi natif à `Obscurable` : une fois masquée, la
+  note ne montre son texte à personne par défaut, propriétaire compris - il
+  faut que ce dernier sélectionne la note et appuie sur Ctrl+P pour la
+  relire, le temps qu'elle reste sélectionnée. La commande Peek n'apparaît
+  dans le menu contextuel que pour qui peut démasquer la pièce
+  (`Obscurable.isMaskable()`, le même contrôle d'accès que Hide/Reveal) :
+  aucun trait supplémentaire n'est nécessaire pour la réserver au
+  propriétaire. Ce qu'un observateur sans accès voit reste strictement
+  identique dans les deux styles (`drawObscuredToMe()` ne dépend pas du
+  style) : ce changement ne touche que l'affichage côté propriétaire.
+- **Menu Aide vidé.** Les 11 PDF n'y sont plus listés, et ne sont plus
+  inclus dans le `.vmod` (économie d'environ 1,6 Mo) ; les PDF source
+  restent nécessaires à la reconstruction des fenêtres Charts et Events
+  (rendues en images), donc conservés dans `assets/pdf/`.
 
 ## Note technique
 
