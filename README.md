@@ -56,6 +56,11 @@ Le premier script extrait et met à l'échelle les images et les PDF dans
 `assets/` et relève la mise en place ; le second produit le `.vmod` dans
 `dist/`. Seul Pillow (et PyMuPDF pour la planche de pions) est nécessaire.
 
+Chaque exécution de `build_module.py` incrémente automatiquement le numéro
+de version (fichier `VERSION` à la racine, format `majeur.mineur`) : le
+`.vmod` produit est donc toujours identifié par une version plus récente que
+la précédente.
+
 ## Organisation
 
 ```

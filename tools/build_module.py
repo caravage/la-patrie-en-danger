@@ -24,12 +24,25 @@ PDF = os.path.join(ROOT, 'assets', 'pdf')
 DIST = os.path.join(ROOT, 'dist')
 
 MODULE_NAME = 'La Revolution francaise : La patrie en danger 1791-1795'
-MODULE_VERSION = '1.0'
-MODULE_DESC = ("Conversion of the Tabletop Simulator mod. Game (c) 1995 Azure "
-               "Wish Enterprise, artwork (c) 2021 Ilya Kudriashov.")
+MODULE_DESC = "Game (c) 1995 Azure Wish Enterprise, artwork (c) 2021 Ilya Kudriashov."
 VASSAL_VERSION = '3.7.27'
 BOARD_NAME = 'Game Board'
 MAP_NAME = 'Game Board'
+VERSION_FILE = os.path.join(ROOT, 'VERSION')
+
+
+def bump_version():
+    """Lit VERSION, incremente le numero mineur, l'ecrit, et renvoie le
+    resultat : un module reconstruit est toujours une version plus recente
+    que la precedente, meme entre deux sessions de travail."""
+    try:
+        major, minor = open(VERSION_FILE).read().strip().split('.')
+    except (FileNotFoundError, ValueError):
+        major, minor = '1', '0'
+    version = '%s.%d' % (major, int(minor) + 1)
+    with open(VERSION_FILE, 'w') as f:
+        f.write(version + '\n')
+    return version
 
 FLIP_KEY = V.keystroke(70)      # Ctrl+F : change party
 DEPUTY_VALUE_KEY = V.keystroke(86)  # Ctrl+V : change a deputy's value
@@ -662,6 +675,8 @@ def build():
 
 
 def main():
+    global MODULE_VERSION
+    MODULE_VERSION = bump_version()
     os.makedirs(DIST, exist_ok=True)
     xml, b = build()
     moduledata = (
