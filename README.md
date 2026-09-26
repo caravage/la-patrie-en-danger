@@ -20,6 +20,9 @@ mise en place ; les joueurs appliquent les règles eux‑mêmes.
 * **Marqueurs** de contrôle régional, de révolte et de piste.
 * **Trésoreries** : un compteur numérique par camp plus celui du Gouvernement,
   avec +50/+100/+200, −50/−100/−200 et saisie directe du montant.
+* **Compteur « Spent this turn »** posé sur l'encart « Assignats » du plateau :
+  total des assignats dépensés dans le tour, tenu à la main, qui sert à
+  l'ajustement de l'Économie (+1 par tranche de 1000, §10.1).
 * **Fenêtre « Aides de jeu »** consultable sans quitter VASSAL : Personality
   Actions, Regional Actions, The Laws, Regime Cycles, et une page par courant
   pour les Factions (en anglais).
@@ -40,6 +43,7 @@ Conforme aux règles §4.3 à §4.7 :
 | Contrôle régional des six courants, Brest et Nîmes neutres, révolte à Bourges | §4.6 |
 | Trésoreries 350 / 350 / 1400 / 800 / 1400 / 400 et Gouvernement 2300 | §4.6 |
 | Armées régulières à Lille, Metz, Strasbourg et Marseille | §4.7 |
+| Compteur des assignats dépensés à 0, sur l'encart « Assignats » | §3.2.3.4 |
 
 Les personnalités ne sont pas placées à la mise en place : chaque joueur trouve
 les siennes dans sa zone, prêtes pour la phase de placement (§6.5).
@@ -286,6 +290,19 @@ Corrections et ajouts demandés après relecture du premier module :
 - Même découpage par onglet que la version précédente, conservé à
   l'identique : chaque régime garde ses deux sous-onglets « Economy &
   Politics » / « Counter-Revolution & Commune », un par page du PDF.
+
+## Version 6 : compteur des assignats dépensés
+
+- **Compteur « Spent this turn »** sur l'encart « Assignats » du plateau.
+  Les trésoreries étant des compteurs numériques, la monnaie dépensée ne
+  s'accumulait plus nulle part, alors que l'ajustement de l'Économie en fin
+  de tour en dépend (§3.2.3.4, §10.1 : +1 par tranche de 1000 dépensés).
+  Même pion que les trésoreries (+/−, saisie directe), sans automatisme :
+  chaque dépense y est ajoutée à la main, et il est remis à 0 (« Set
+  Amount ») après l'ajustement. Un exemplaire est aussi dans l'onglet
+  Treasury de la palette.
+- Les personnalités en fuite (§7.3.1 résultat B, §7.3.2 résultat B) se posent
+  sur la piste Chronologie, dans la case du tour où elles reviennent.
 
 ## Note technique
 

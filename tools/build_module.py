@@ -178,14 +178,14 @@ class Builder:
         ]
         return gpid, V.build_piece(traits), self.size_of(images[0])
 
-    def treasury(self, current, amount, title=None):
+    def treasury(self, current, amount, title=None, label=None):
         """Compteur numerique d'assignats : +/- et saisie directe.
 
         `title` ajoute une etiquette fixe en haut du pion. Elle est portee par
         le trait le plus externe, donc dessinee par-dessus le montant, et sert
         a distinguer la caisse du Gouvernement de celles des six courants."""
         gpid = self.next_gpid()
-        label = 'Treasury %s' % current
+        label = label or 'Treasury %s' % current
         traits = [
             # En dehors du DynamicProperty, donc $Amount$ vaut deja le
             # nouveau montant au moment ou le message est ecrit.
@@ -383,6 +383,11 @@ def build():
     gpid, d, size, label = b.treasury('Government', C.TREASURY_GOVERNMENT,
                                       title='Government')
     defs['tresorerie_gouvernement'] = (gpid, d, size, label, 'treasury')
+    # total des assignats depenses dans le tour (§3.2.3.4 et §10.1) : tenu a
+    # la main, remis a zero apres l'ajustement de l'Economie
+    gpid, d, size, label = b.treasury('Spent', 0, title='Spent this turn',
+                                      label='Spent Assignats')
+    defs['assignats_depenses'] = (gpid, d, size, label, 'treasury')
 
     for cur in C.CURRENTS:
         gpid, d, size, label = b.secret_note(cur)
@@ -412,7 +417,7 @@ def build():
     panels.append(panel('Track Markers', [p[0] for p in C.PIECES if p[2] == 'piste'], 5))
     panels.append(panel('Treasury', ['assignat_50']
                         + ['tresorerie_' + C.CURRENT_SLUG[c] for c in C.CURRENTS]
-                        + ['tresorerie_gouvernement'], 4))
+                        + ['tresorerie_gouvernement', 'assignats_depenses'], 4))
     panels.append(panel('Notes', ['note_' + C.CURRENT_SLUG[c] for c in C.CURRENTS], 3))
     palette = ('<VASSAL.build.module.PieceWindow name="Pieces" text="Pieces" '
                'tooltip="Open the pieces palette" hidden="false" scale="1.0" '
@@ -489,6 +494,7 @@ def build():
         place('tresorerie_' + C.CURRENT_SLUG[cur],
               i * col_w + col_w - 150, board_h + 200)
     place('tresorerie_gouvernement', board_w // 2, board_h + 430)
+    place('assignats_depenses', *C.SPENT_XY)
 
     # une note par camp, sous sa trésorerie. Le compteur d'assignats descend
     # jusqu'a y=2802 et l'encart du camp s'arrete vers y=2981 : la fiche

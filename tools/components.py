@@ -94,6 +94,7 @@ PERSONALITIES = [
 # les encarts illustres du plateau.
 PRISON_XY = (3160, 1382)     # encart "Prison du Temple"
 GUILLOTINE_XY = (3160, 1856)  # encart "Madame Guillotine"
+SPENT_XY = (3160, 280)        # encart "Assignats" : depenses du tour (§3.2.3.4)
 
 # --- Autres pions : (fichier, libelle, categorie, courant, index) -----------
 PIECES = [
