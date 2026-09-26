@@ -31,15 +31,19 @@ MAP_NAME = 'Game Board'
 VERSION_FILE = os.path.join(ROOT, 'VERSION')
 
 
-def bump_version():
+def bump_version(forced=None):
     """Lit VERSION, incremente le numero mineur, l'ecrit, et renvoie le
     resultat : un module reconstruit est toujours une version plus recente
-    que la precedente, meme entre deux sessions de travail."""
-    try:
-        major, minor = open(VERSION_FILE).read().strip().split('.')
-    except (FileNotFoundError, ValueError):
-        major, minor = '1', '0'
-    version = '%s.%d' % (major, int(minor) + 1)
+    que la precedente, meme entre deux sessions de travail. `forced`
+    (option --version X.Y) fixe le numero au lieu de l'incrementer."""
+    if forced:
+        version = forced
+    else:
+        try:
+            major, minor = open(VERSION_FILE).read().strip().split('.')
+        except (FileNotFoundError, ValueError):
+            major, minor = '1', '0'
+        version = '%s.%d' % (major, int(minor) + 1)
     with open(VERSION_FILE, 'w') as f:
         f.write(version + '\n')
     return version
@@ -696,7 +700,8 @@ def build():
 
 def main():
     global MODULE_VERSION
-    MODULE_VERSION = bump_version()
+    forced = sys.argv[sys.argv.index('--version') + 1] if '--version' in sys.argv else None
+    MODULE_VERSION = bump_version(forced)
     os.makedirs(DIST, exist_ok=True)
     xml, b = build()
     moduledata = (

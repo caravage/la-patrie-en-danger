@@ -63,6 +63,8 @@ Chaque exécution de `build_module.py` incrémente automatiquement le numéro
 de version (fichier `VERSION` à la racine, format `majeur.mineur`) : le
 `.vmod` produit est donc toujours identifié par une version plus récente que
 la précédente.
+Pour fixer un numéro précis plutôt que d'incrémenter :
+`python3 tools/build_module.py --version 1.0`.
 
 ## Organisation
 
