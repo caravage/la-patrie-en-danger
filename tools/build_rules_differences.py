@@ -63,7 +63,8 @@ ROWS = [
      'Qualifiés de « <b>hors-la-loi</b> » dans les fiches de régime, mais l\'exemple d\'arrestation '
      'n\'applique pas le +5.',
      '« Arrestable (but not outlaws) ».',
-     'Moyen : ambiguïté de la VF que la VO a tranchée.'),
+     '<b>Résolu par les auteurs</b> (Marcé, Goyon ; errata XI-B2) : le +5 ne vaut que pour les '
+     'courants hors-la-loi, pas pour ces personnalités. La VO est correcte.'),
     ('10', 'Conscription',
      'Aucune condition.',
      'Seulement en guerre, et non revotable avant la paix.',
@@ -108,7 +109,8 @@ CHART_ROWS = [
     ('Freedom of Religion (Libertés du Culte)',
      'Commune <b>-2</b> dans la VF et dans les règles anglaises ; l\'aide « The Laws » indique à tort -1.'),
     ('Déclaration de guerre, Conscription',
-     'Aucune restriction « une fois par partie » dans la VF : l\'aide « The Laws » a tort sur ces deux lois.'),
+     'La VF ne le dit pas, mais <b>les auteurs</b> (Marcé ; errata VII-E2) précisent que Déclaration de guerre, '
+     'Patrie en danger et Conscription ne peuvent être adoptées qu\'une fois : l\'aide « The Laws » est fondée.'),
 ]
 
 
@@ -138,7 +140,7 @@ for n, s, fr, en, imp in ROWS:
     data.append([Paragraph(n, body), Paragraph(s, label), Paragraph(fr, body), Paragraph(en, body),
                  Paragraph(imp, body)])
 story.append(table(data, COLS))
-story.append(Paragraph('Aides de jeu anglaises corrigées par la VF', phase))
+story.append(Paragraph('Aides de jeu anglaises vérifiées sur la VF', phase))
 data = [[Paragraph('Loi', head), Paragraph('Constat', head)]]
 for s, txt in CHART_ROWS:
     data.append([Paragraph(s, label), Paragraph(txt, body)])

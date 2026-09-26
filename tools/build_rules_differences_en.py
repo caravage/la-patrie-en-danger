@@ -94,8 +94,8 @@ ROWS = [
         'descriptions, yet the Marat arrest example does not apply the +5.',
         'les Personnalités suivantes sont hors-la-loi : Marat (Mtg), Chaumette (Scu)...'),
      en('R.1.4.1, R.2.4.1...', '“Arrestable (but not outlaws)”.'),
-     'Was “arrestable but not outlaws” a deliberate clarification, removing the +5 in Paris and the '
-     'automatic arrest at a regime change?'),
+     '<b>Resolved by the designers</b> (Marcé, Goyon; errata XI-B2): the +5 applies only to outlawed '
+     'factions, not to these leaders. The English rules are correct.'),
     ('10', 'Conscription',
      fr('XII-12 p.32', 'No condition to propose it, and nothing forbids passing it again.'),
      en('13.5.2', 'Only during foreign or civil war, and cannot be passed again until it has ended with peace.'),
@@ -145,8 +145,9 @@ ROWS = [
 CHART_ROWS = [
     ('Freedom of Religion', 'Commune <b>-2</b> in the French rulebook (XII-9 p.31) and in the English '
      'rules (13.3.3); the English “The Laws” chart says -1.'),
-    ('Declaration of War, Conscription', 'No “once per game” restriction in the French rulebook '
-     '(XII-11, XII-12 p.32); the English “The Laws” chart adds it to both.'),
+    ('Declaration of War, Conscription', 'Not in the French rulebook (XII-11, XII-12 p.32), but <b>the '
+     'designers</b> (Marcé; errata VII-E2) state that War, Fatherland in Danger and Conscription can be '
+     'passed only once: the English “The Laws” chart is right.'),
 ]
 
 
@@ -177,7 +178,7 @@ for n, topic, f, e, q in ROWS:
     data.append([Paragraph(n, body), Paragraph(topic, label), Paragraph(f, body), Paragraph(e, body),
                  Paragraph(q, body)])
 story.append(table(data, COLS))
-story.append(Paragraph('English player aids contradicted by the French rulebook', phase))
+story.append(Paragraph('English player aids checked against the French rulebook', phase))
 data = [[Paragraph('Law', head), Paragraph('Finding', head)]]
 for s, txt in CHART_ROWS:
     data.append([Paragraph(s, label), Paragraph(txt, body)])
