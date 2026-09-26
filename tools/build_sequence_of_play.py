@@ -13,11 +13,11 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', '
 
 title = ParagraphStyle('t', fontName='Times-Bold', fontSize=20, leading=24, textColor=RED, spaceAfter=4)
 sub = ParagraphStyle('s', fontName='Helvetica-Oblique', fontSize=8.5, textColor=black, spaceAfter=6)
-phase = ParagraphStyle('p', fontName='Times-Bold', fontSize=12.5, textColor=RED, spaceBefore=7, spaceAfter=2)
+phase = ParagraphStyle('p', fontName='Times-Bold', fontSize=12.5, textColor=RED, spaceBefore=5, spaceAfter=4)
 head = ParagraphStyle('h', fontName='Helvetica', fontSize=9, textColor=RED)
 step = ParagraphStyle('st', fontName='Helvetica', fontSize=9, textColor=BLUE, leading=11)
 tip = ParagraphStyle('tp', fontName='Helvetica', fontSize=7, textColor=BLUE, leading=8.5)
-body = ParagraphStyle('b', fontName='Helvetica', fontSize=8.2, leading=10)
+body = ParagraphStyle('b', fontName='Helvetica', fontSize=8, leading=9.6)
 rule = ParagraphStyle('r', fontName='Helvetica', fontSize=8, leading=10, textColor=black)
 
 W = A4[0] - 30 * mm
@@ -39,8 +39,8 @@ def section(name, rows):
         ('LINEBELOW', (0, 1), (-1, -1), 0.4, black),
         ('LINEBEFORE', (1, 0), (1, -1), 0.4, black),
         ('LINEBEFORE', (2, 0), (2, -1), 0.4, black),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
     ]))
     return [Paragraph(name, phase), t]
 
@@ -54,17 +54,20 @@ story = [
 story += section('Initial Phase', [
     ('1. Negotiations', 'Only moment for private talks.',
      'Free discussion, open or private, 10 to 15 minutes. Alliances are never binding. '
-     'Currents may give assignats to each other at any time (never to the Government). '
+     'Currents may give assignats to each other at any time, never to the Government '
+     '(except under the Fatherland in Danger law, 13.6). '
      'The Royalist can never ally with the Mountain or the Sans-Culottes.', '6.1'),
     ('2. Random Events', None,
      'The player controlling the Government rolls 2d6 on each of the four tables of the current regime: '
-     'Economy, Politics, Counter-Revolution, Paris Commune, applying the table modifiers '
-     '(result kept between 2 and 12). Skip the Commune table while Paris is held by Royalist/Allied armies.', '6.2'),
+     'Economy, Politics, Counter-Revolution, Paris Commune, applying the table modifiers. '
+     'An impossible or contradictory result is ignored, with no reroll. '
+     'Skip the Commune table while Paris is held by Royalist/Allied armies.', '6.2, 9.7.1'),
     ('3. Turn Order', None,
      'Government first. Then Currents by Fame + controlled regions (tie: higher Fame, then a die roll). '
      'Set the markers on the Turn Order track.', '6.3'),
     ('4. Objectives', 'Success +1 Fame, failure -1.',
-     'Government, then each Current, declares one precise objective (a target or a region). '
+     'Government, then each Current, declares one precise objective (a target or a region); '
+     'Currents may declare a joint one. If another Current takes the Government, its objective is ignored. '
      'A failed Government objective costs -1 to the Government and to its controlling Current.', '6.4'),
     ('5. Personality Placement', None,
      'In turn order, place all your Personalities on regions. You need one in Paris if you control the '
@@ -74,17 +77,18 @@ story += section('Action Phase', [
     ('6. Personality Actions', 'Costs x2 at Economy II, x3 at III.',
      'Arrests (Government), removals (Currents not officially present), then persuasions. '
      'Pay N times the cost for N rolls, keep one (Personality and Regional actions only). '
-     'Double 1: Fame -1. Double 6: Fame +1. One action per Personality per turn.', '7.1-7.3'),
+     'Double 1: Fame -1. Double 6: Fame +1. These actions need no Personality of your own.', '7.1-7.3'),
     ('7. Regional Actions', None,
      'In this order: plots, then revolts, then revolt suppressions, then Commune raise / suppress. '
-     '+2 per influential Personality in the region.', '7.4'),
+     '+2 per influential Personality in the region. Each Personality performs at most one action per turn.', '7.4'),
     ('8. Political Phase', None,
      'Check regime change and elections. Persuade deputies (Legislative, Thermidor, Directorate, '
      'First Republic). King\'s action (Legislative). Propose and vote laws.', '7.5'),
 ])
 story += section("Patriots' Phase", [
     ('9. Justice', None,
-     'Judge every imprisoned Personality according to the regime. Trial of Louis XVI is proposed like a law.',
+     'Judge every imprisoned Personality according to the regime. Louis XVI is not judged here: '
+     'his trial is proposed as a law in step 8.',
      '8.1, 11.4'),
     ('10. Debates', None,
      'Vote of confidence where the regime allows it (Legislative; Mercy, Directorate, First Republic). '
@@ -93,7 +97,8 @@ story += section("Patriots' Phase", [
 story += section('Military Phase', [
     ('11. Reinforcements', 'Unpaid regular army = bankruptcy.',
      'Coalition, then Catholic & Royal armies (placed by the Royalist), then Government. '
-     'Maintenance: 100 per army (Economy multiplier applies).', '9.3-9.4'),
+     'Maintenance: 100 per army, paid by the Government (revolutionary) or the Royalist (Catholic & Royal). '
+     'Unpaid volunteers go first.', '9.3-9.4'),
     ('12. Movement', None,
      'Coups first (Open scenario). Then Allied, Catholic & Royal, then Revolutionary armies. '
      'Enemy armies may pin revolutionary armies in their region.', '9.5, 12'),
@@ -115,7 +120,7 @@ story += section('Interphase', [
 ])
 
 doc = SimpleDocTemplate(OUT, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
-                        topMargin=12 * mm, bottomMargin=10 * mm,
+                        topMargin=9 * mm, bottomMargin=8 * mm,
                         title='Sequence of Play', author='La patrie en danger - VASSAL module')
 doc.build(story)
 print(OUT)
