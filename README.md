@@ -322,6 +322,26 @@ Le module a été vérifié en le chargeant réellement dans le moteur VASSAL :
 216 pièces décodées sans erreur, 94 images référencées toutes présentes,
 110 piles de mise en place toutes dans les limites du plan.
 
+## Partie solo contre l'ordinateur (web)
+
+`tools/simulation/` contient le moteur de règles complet (livret français de
+1995 par défaut, `rules='EN'` pour la Decimal Version) et les IA des courants,
+sans négociation. `lpd_play.py` fait jouer un humain contre 5 IA : la partie
+est rejouée depuis le début à chaque décision (graine fixe), ce qui permet
+aussi d'annuler un choix.
+
+- En console : `python3 tools/simulation/lpd_play.py Gironde 42`
+- Statistiques sur N parties entre IA : `python3 tools/simulation/run.py HS 500`
+- Page web : `web/index.html` + `web/carte.jpg` ; elle charge le moteur Python
+  dans le navigateur avec Pyodide. Pour l'héberger, publier à côté de la page
+  `py/` (les 4 fichiers `lpd_*.py` et `tools/components.py`) et `pyodide/`
+  (`pyodide.js`, `pyodide.asm.mjs`, `pyodide.asm.wasm`, `pyodide-lock.json`
+  du paquet npm `pyodide`, et `python_stdlib.zip` encodé en base64 sous le nom
+  `python_stdlib.b64.txt`).
+
+Le Gouvernement reste toujours joué par l'ordinateur, même quand le courant
+du joueur le contrôle.
+
 ## Droits
 
 Jeu © 1995 Azure Wish Enterprise — illustrations © 2021 Ilya Kudriashov.
