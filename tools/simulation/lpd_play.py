@@ -12,7 +12,7 @@ import json
 import sys
 
 from lpd_data import CURRENTS, GOV, PERSO, REGIONS
-from lpd_engine import Game, NeedInput
+from lpd_engine import LAW_FR, Game, NeedInput
 
 
 def snapshot(g):
@@ -23,7 +23,8 @@ def snapshot(g):
         control={r: g.control[r] for r in REGIONS}, revolt=sorted(g.revolt), coal=sorted(g.coal),
         commune=dict(raised=g.commune_raised, ctrl=g.commune_ctrl), king=g.king,
         war=g.foreign_war, order=list(g.order), vp=g.vp(),
-        objective=g.objectives.get(g.human), official=[c for c in CURRENTS if g.official(c)],
+        objective=g.objectives.get(g.human), gov_objective=g.objectives.get(GOV),
+        law_names=LAW_FR, official=[c for c in CURRENTS if g.official(c)],
         outlawed=[c for c in CURRENTS if g.outlawed(c)],
         personalities=[dict(id=pid, label=PERSO[pid]['label'], holder=s['holder'], status=s['status'],
                             loc=s['loc']) for pid, s in g.p.items()],
@@ -41,6 +42,8 @@ def step(seed, human, answers, rules='FR'):
     out = dict(question=question, log=g.lines, state=snapshot(g), over=question is None)
     if question is None:
         out['winner'] = g.winner
+        m = getattr(g, 'majority', None)
+        out['majority'] = m if m in ('rev', 'reac') else None
     return out
 
 

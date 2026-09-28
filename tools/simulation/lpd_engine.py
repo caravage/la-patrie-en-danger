@@ -75,6 +75,48 @@ LAW_FR = {'maximum': 'Maximum des prix et salaires', 'free_prices': 'Loi économ
 TRACK_FR = {'economy': 'Économie', 'commune': 'Commune', 'clergy': 'Clergé', 'coalition': 'Coalisés'}
 
 
+REGION_FR = {'Orleans': 'Orléans', 'Angouleme': 'Angoulême', 'Nimes': 'Nîmes'}
+REGIME_FR = {'Legislative': 'Législative', 'Convention': 'Convention', 'Terror': 'Terreur',
+             'Thermidor': 'Thermidor', 'Wrath': 'Épouvante', 'Mercy': 'Indulgence', 'Directorate': 'Directoire',
+             'Prairial': 'Prairial', 'FFR': 'République fédérale', 'FROI': 'République une et indivisible',
+             'Vendemiaire': 'Vendémiaire'}
+EVENT_FR = {'economy': 'Économie', 'politics': 'Politique', 'counter': 'Contre-révolution', 'commune': 'Commune de Paris'}
+ACTION_FR = {'plot': 'complot', 'revolt': 'fomente une révolte', 'suppress': 'calme la révolte',
+             'commune_raise': 'soulève la Commune', 'commune_suppress': 'réprime la Commune'}
+RES_FR = {'A': 'réussite (A)', 'B': 'résultat B', 'C': 'échec (C)'}
+
+
+def rn(r):
+    return REGION_FR.get(r, r)
+
+
+def cn(c):
+    return 'Gouvernement' if c == GOV else ('neutre' if c is None else c)
+
+
+def why_fr(why):
+    fixed = {'event': 'événement', 'coup': "coup d'État", 'veto': 'veto du Roi', 'bankruptcy': 'banqueroute',
+             'trial': 'procès du Roi', 'regime': 'nouveau régime', 'referendum': 'référendum',
+             'gov objective failed': 'objectif du Gouvernement manqué', 'failed coup': "coup d'État manqué",
+             'King': 'action du Roi', 'King (Royalist)': 'action du Roi (Royaliste)',
+             'King (Feuillant)': 'action du Roi (Feuillant)', 'objective': 'objectif atteint',
+             'objective failed': 'objectif manqué', 'law rejected': 'loi rejetée', 'Royalist spoils': 'butin royaliste',
+             'Fatherland in Danger opposition': 'opposition à la Patrie en danger',
+             'double 1': 'double 1', 'double 6': 'double 6', '': ''}
+    if why in fixed:
+        return fixed[why]
+    if why.startswith('law '):
+        return 'loi « %s »' % LAW_FR.get(why[4:], why[4:])
+    if why.startswith('spending '):
+        return '%s assignats dépensés' % why[9:]
+    if why.startswith('objective '):
+        parts = why.split(' ', 3)
+        tgt = parts[3] if len(parts) > 3 else ''
+        tgt = PERSO[tgt]['label'] if tgt in PERSO else rn(LAW_FR.get(tgt, REGIME_FR.get(tgt, tgt)))
+        return 'objectif %s : %s' % ('atteint' if parts[1] == 'ok' else 'manqué', tgt)
+    return why
+
+
 def law_label(law):
     cost, fm, tracks, _ = LAWS[law]
     bits = ['%s %+d' % (TRACK_FR[t], d) for t, d in tracks.items()]
@@ -178,7 +220,7 @@ class Game:
         self.regions_history = []
 
     # ================================================================ humain
-    def ask(self, key, prompt, options, multi=False):
+    def ask(self, key, prompt, options, multi=False, **extra):
         """Renvoie la prochaine decision enregistree, sinon suspend la partie.
         options : liste de dict(label=..., ...) ; reponse : index (ou liste
         de [index, nombre de jets] si multi)."""
@@ -186,7 +228,9 @@ class Game:
             a = self.answers[self.answer_i]
             self.answer_i += 1
             return a
-        raise NeedInput(dict(key=key, prompt=prompt, options=options, multi=multi))
+        q = dict(key=key, prompt=prompt, options=options, multi=multi)
+        q.update(extra)
+        raise NeedInput(q)
 
     def ask_yes_no(self, key, prompt, yes='Oui', no='Non'):
         return self.ask(key, prompt, [dict(label=yes), dict(label=no)]) == 0
@@ -249,7 +293,7 @@ class Game:
         old = self.fame[who]
         self.fame[who] = max(1, min(20, old + d))
         if self.fame[who] != old:
-            self.log('Fame %s %+d -> %d (%s)' % (SHORT[who], d, self.fame[who], why))
+            self.log('Renommée %s %+d → %d (%s)' % (cn(who), d, self.fame[who], why_fr(why)))
 
     def track(self, t, d, why=''):
         if d == 0:
@@ -259,7 +303,7 @@ class Game:
         old = self.tracks[t]
         self.tracks[t] = max(1, min(20, old + d))
         if self.tracks[t] != old:
-            self.log('%s %+d -> %d (%s)' % (t, d, self.tracks[t], why))
+            self.log('%s %+d → %d (%s)' % (TRACK_FR.get(t, t), d, self.tracks[t], why_fr(why)))
         if t == 'clergy' and self.tracks['clergy'] >= 17:
             self.clergy_iii = True
         if t == 'coalition':
@@ -395,7 +439,7 @@ class Game:
         if r == 'Paris' and self.commune_raised:
             return
         if self.control[r] is not None:
-            self.log('Event: %s becomes neutral (was %s)' % (r, SHORT[self.control[r]]))
+            self.log('%s devient neutre (était %s)' % (rn(r), cn(self.control[r])))
         self.control[r] = None
 
     def ev_neutral_revolt(self, r):
@@ -405,7 +449,7 @@ class Game:
             return
         self.control[r] = None
         self.revolt.add(r)
-        self.log('Event: neutral revolt in %s' % r)
+        self.log('Révolte neutre à %s' % rn(r))
 
     def ev_control_revolt(self, c, r):
         if r in self.revolt:
@@ -419,7 +463,7 @@ class Game:
             return
         self.revolt.add(r)
         self.control[r] = c
-        self.log('Event: %s revolt in %s (controls it)' % (SHORT[c], r))
+        self.log('Révolte à %s, contrôlée par %s' % (rn(r), c))
         self.objective_hit(c, 'revolt', r)
 
     def ev_royalist_riot(self, r):
@@ -430,7 +474,7 @@ class Game:
         if r in self.revolt or r in self.coal:
             return
         self.control[r] = c
-        self.log('Event: %s controls %s' % (SHORT[c], r))
+        self.log('%s prend le contrôle de %s' % (c, rn(r)))
 
     def ev_controller_pays(self, r, amount, exempt=None):
         c = self.effective_control(r)
@@ -438,14 +482,14 @@ class Game:
             amount *= 1
             paid = min(self.money[c], amount)
             self.money[c] -= paid
-            self.log('Event: %s pays %d for %s' % (SHORT[c], paid, r))
+            self.log('%s paie %d assignats (%s)' % (c, paid, rn(r)))
 
     def paris_neutral(self):
         if self.commune_raised:
             self.commune_ctrl = None
         elif 'Paris' not in self.revolt:
             self.control['Paris'] = None
-        self.log('Event: Paris becomes neutral')
+        self.log('Paris devient neutre')
 
     def commune_rise(self, c, force=False):
         if self.paris_occupied():
@@ -454,7 +498,7 @@ class Game:
             return
         self.commune_raised = True
         self.commune_ctrl = c
-        self.log('Commune raised (%s)' % (SHORT[c] if c else 'neutral'))
+        self.log('La Commune de Paris se soulève (%s)' % ('menée par ' + c if c else 'sans meneur'))
         self.objective_hit(c, 'commune_raise', 'Paris')
         self.stats['commune_raised'] += 1
 
@@ -463,13 +507,13 @@ class Game:
             self.commune_raised = False
             self.control['Paris'] = self.commune_ctrl if self.commune_ctrl else self.control['Paris']
             self.commune_ctrl = None
-            self.log('Commune calmed down')
+            self.log('La Commune se calme')
 
     def kill(self, pid):
         if self.p[pid]['status'] != 'dead':
             self.p[pid]['status'] = 'dead'
             self.p[pid]['loc'] = None
-            self.log('%s dies' % PERSO[pid]['label'])
+            self.log('%s meurt' % PERSO[pid]['label'])
 
     def kill_prisoners(self, currents, spare_king=True):
         for pid, s in self.p.items():
@@ -491,12 +535,12 @@ class Game:
             if self.p[pid]['status'] in ('free', 'fled'):
                 self.p[pid]['status'] = 'exiled'
                 self.p[pid]['loc'] = None
-                self.log('%s exiled' % PERSO[pid]['label'])
+                self.log('%s s\'exile' % PERSO[pid]['label'])
 
     def switch_event(self, pid, c):
         if self.alive(pid) and c in ({PERSO[pid]['main']} | PERSO[pid]['secondary']):
             self.p[pid]['holder'] = c
-            self.log('%s switches to %s (event)' % (PERSO[pid]['label'], SHORT[c]))
+            self.log('%s passe à %s (événement)' % (PERSO[pid]['label'], c))
 
     def move_deputies(self, src, dst, half_up=True):
         n = self.deputies[src]
@@ -531,14 +575,14 @@ class Game:
             else:
                 tgt = regions[0]
                 a = min(cands, key=lambda x: self.dist(self.armies[x]['region'], tgt))
-        self.log('Event: revolutionary army %s discarded (%s)' % (a, self.armies[a]['region']))
+        self.log('Une armée révolutionnaire est retirée (%s)' % rn(self.armies[a]['region']))
         del self.armies[a]
 
     def discard_allied(self, ids):
         for aid in ids:
             if aid in self.armies:
                 del self.armies[aid]
-                self.log('Event: allied %s leaves the war' % aid)
+                self.log('L\'armée coalisée %s quitte la guerre' % ALLIED[aid].get('label', aid))
             if self.allied_state.get(aid) in ('pending', 'onmap', 'available'):
                 self.allied_state[aid] = 'discarded'
 
@@ -565,24 +609,51 @@ class Game:
                 s['region'] = 'Paris'
                 return
 
+    DECISIONS = {
+        'bread': ('Pain pour Paris', 'Renommée Gouvernement +1, coûte 300', 'Paris devient neutre, coûte 200'),
+        'peace_asked': ('Demande de paix', 'Renommée Gouvernement +1, coûte 300', 'Renommée Gouvernement -1, Commune +3'),
+        'pikes': ('Les piques', 'Commune -1, Renommée Gouvernement +1', 'Commune +1, Renommée Gouvernement -1'),
+        'feed': ('Nourrir le peuple', 'Commune -2, coûte 300', 'Commune +2, Renommée Gouvernement -2'),
+        'bread_conv': ('Pain pour Paris', 'coûte 300', 'Commune +2, Renommée Gouvernement -1, Renommée Gironde -1'),
+        'marie_antoinette': ('Marie-Antoinette', 'Renommée Gouvernement +2, Commune -3',
+                             'Renommée Gouvernement -1, Commune +3'),
+        'forfeiture': ('Déchéance du Roi', 'Commune -2, Renommée Feuillant -1, Renommée Marais -1',
+                       'Commune +2, Renommée Feuillant +1'),
+    }
+
+    def decision_text(self, key):
+        name, y, n = self.DECISIONS.get(key, (key, 'oui', 'non'))
+        return name, 'Oui : %s. Non : %s.' % (y, n)
+
     def gov_decide(self, key, yes, no):
         h = self.gov_holder
+        if h == self.human:
+            name, txt = self.decision_text(key)
+            ok = self.ask_yes_no('gov_event', 'Événement « %s » : tu décides pour le Gouvernement. %s' % (name, txt))
+            (yes if ok else no)(self)
+            self.log('Le Gouvernement (%s) décide « %s » : %s' % (h, name, 'oui' if ok else 'non'))
+            return
         # simulation grossiere de l'effet : la faction au pouvoir compare
         before = (self.fame[GOV], self.tracks['commune'], self.gov_money)
         u_yes = self._eval_branch(h, yes)
         u_no = self._eval_branch(h, no)
         (yes if u_yes >= u_no else no)(self)
-        self.log('Gov decides %s: %s' % (key, 'yes' if u_yes >= u_no else 'no'))
+        self.log('Le Gouvernement (%s) décide « %s » : %s' % (h, self.decision_text(key)[0], 'oui' if u_yes >= u_no else 'non'))
 
     def assembly_decide(self, key, yes, no):
         votes = {'yes': 0, 'no': 0}
         for c in CURRENTS:
             if self.deputies[c] <= 0:
                 continue
-            u = self._eval_branch(c, yes) - self._eval_branch(c, no)
+            if c == self.human:
+                name, txt = self.decision_text(key)
+                u = 1 if self.ask_yes_no('assembly_event', 'Vote de l\'Assemblée « %s » (tes %d députés). %s'
+                                         % (name, self.deputies[c], txt), 'Pour', 'Contre') else -1
+            else:
+                u = self._eval_branch(c, yes) - self._eval_branch(c, no)
             votes['yes' if u >= 0 else 'no'] += self.deputies[c]
         (yes if votes['yes'] > votes['no'] else no)(self)
-        self.log('Assembly decides %s: %s' % (key, 'yes' if votes['yes'] > votes['no'] else 'no'))
+        self.log('L\'Assemblée vote « %s » : %d pour, %d contre' % (self.decision_text(key)[0], votes['yes'], votes['no']))
 
     def _eval_branch(self, c, fn):
         """Applique fn sur une copie legere pour mesurer son effet pour c."""
@@ -617,14 +688,14 @@ class Game:
         self.foreign_war = True
         self.war_entered = False
         self.tracks['coalition'] = 20
-        self.log('*** FOREIGN WAR declared (%s)' % why)
+        self.log('*** GUERRE EXTÉRIEURE : la France est en guerre contre la Coalition')
         self.stats['war_turn'] = self.stats['war_turn'] or self.turn
 
     def end_war(self, why):
         if not self.foreign_war:
             return
         self.foreign_war = False
-        self.log('*** Foreign peace (%s)' % why)
+        self.log('*** PAIX EXTÉRIEURE')
         if not self.civil_war():
             self.conscription = False
         if self.fatherland and self.fatherland == 'allied':
@@ -674,7 +745,7 @@ class Game:
             a.pop('hiding', None)
         if self.english_subsidies and self.tracks['coalition'] >= 15 and self.turn > 1:
             pass  # verse a l'Interphase
-        self.log('==================== TURN %d (%s) ====================' % (self.turn, self.regime))
+        self.log('==================== Tour %d (%s) ====================' % (self.turn, REGIME_FR.get(self.regime, self.regime)))
 
     # ================================================================ events
     def random_events(self):
@@ -686,7 +757,7 @@ class Game:
             s = self.d6() + self.d6() + mod_fn(self)
             s = max(2, min(12, s))
             self.events_log.append((self.turn, self.regime, cat, s))
-            self.log('Event %s roll %d' % (cat, s))
+            self.log('Événement %s (jet %d)' % (EVENT_FR[cat], s))
             fn = tbl.get(s)
             if fn:
                 fn(self)
@@ -698,7 +769,7 @@ class Game:
         def key(c):
             return (-(self.fame[c] + len(self.regions_of(c))), -self.fame[c], self.rng.random())
         self.order = sorted(CURRENTS, key=key)
-        self.log('Order: ' + ' > '.join(SHORT[c] for c in self.order))
+        self.log('Ordre du tour : ' + ', '.join(self.order))
 
     # ================================================================ placement & plan
     def compute_threat(self):
@@ -736,24 +807,39 @@ class Game:
 
     def gov_arrests(self):
         h = self.gov_holder
+        if self.gov_human():
+            k = self.k()
+            cands = [pid for pid, s in self.p.items() if s['status'] == 'free' and s['loc']
+                     and s['holder'] not in (h, self.gov_partner) and self.arrestable(pid)]
+            if cands:
+                harsh = self.regime in ('Terror', 'Wrath', 'Prairial')
+                opts = [dict(label='Arrêter %s (%s) à %s' % (PERSO[pid]['label'], self.p[pid]['holder'],
+                                                             rn(self.p[pid]['loc'])),
+                             cost=100 * k, p=round(p_result(self.fame[GOV] + self.arrest_mod(pid), 'AB' if harsh else 'A'), 3),
+                             region=self.p[pid]['loc'], infl=True) for pid in cands]
+                ans = self.ask('arrests', 'Arrestations par le Gouvernement (caisse %d ; garde de quoi payer '
+                               'l\'entretien des armées : %d). Résultat B : la personnalité s\'enfuit%s.'
+                               % (self.gov_money, self.maint_reserve(), ' (prison sous ce régime)' if harsh else ''),
+                               opts, multi=True, budget=self.gov_money)
+                self.gov_plan['arrests'] = [(cands[i], max(1, min(3, int(n)))) for i, n in ans]
         targets = self.gov_plan.get('arrests', [])
         for pid, n in targets:
             s = self.p[pid]
             if s['status'] != 'free' or s['loc'] is None or not self.arrestable(pid):
                 continue
             cost = 100 * self.k() * n
-            if cost > self.gov_money - self.maint_reserve() or not self.pay(GOV, cost):
+            if (cost > self.gov_money - (0 if self.gov_human() else self.maint_reserve())) or not self.pay(GOV, cost):
                 continue
             fame = self.fame[GOV] + self.arrest_mod(pid)
             res = self.roll(GOV, fame, n)
             self.stats['arrest_attempts'] += 1
             harsh = self.regime in ('Terror', 'Wrath', 'Prairial')
             if res == 'A' or (res == 'B' and harsh):
-                self.imprison(pid, 'arrested by Gov (%s)' % SHORT[h])
+                self.imprison(pid, 'arrêté par le Gouvernement (%s)' % h)
                 self.objective_hit(GOV, 'arrest', pid)
                 self.stats['arrests'] += 1
             elif res == 'B':
-                self.flee(pid, 'flees arrest')
+                self.flee(pid, 'échappe à l\'arrestation et fuit')
 
     def arrest_mod(self, pid):
         s = self.p[pid]
@@ -785,7 +871,7 @@ class Game:
         s = self.p[pid]
         s['status'] = 'prison'
         s['loc'] = None
-        self.log('%s (%s) imprisoned: %s' % (PERSO[pid]['label'], SHORT[s['holder']], why))
+        self.log('%s (%s) est emprisonné : %s' % (PERSO[pid]['label'], s['holder'], why))
 
     def flee(self, pid, why):
         s = self.p[pid]
@@ -793,7 +879,7 @@ class Game:
             s['status'] = 'fled'
             s['ret'] = self.turn + 1
             s['loc'] = None
-            self.log('%s (%s) %s' % (PERSO[pid]['label'], SHORT[s['holder']], why))
+            self.log('%s (%s) %s' % (PERSO[pid]['label'], s['holder'], why))
 
     def do_removals(self, c):
         if self.official(c):
@@ -806,7 +892,7 @@ class Game:
                 continue
             fame = self.fame[c] + self.cur_bonus(c) - (2 if s['loc'] in PERSO[pid]['influence'] else 0)
             if self.roll(c, fame, n) in 'AB':
-                self.flee(pid, 'expelled from %s by %s' % (s['loc'], SHORT[c]))
+                self.flee(pid, 'est chassé de %s par %s' % (rn(s['loc']), c))
 
     def do_persuasions(self, c):
         for pid, n in self.plans[c].get('persuade', []):
@@ -826,7 +912,7 @@ class Game:
             if res == 'A':
                 old = s['holder']
                 s['holder'] = c
-                self.log('%s switches %s -> %s' % (PERSO[pid]['label'], SHORT[old], SHORT[c]))
+                self.log('%s passe de %s à %s' % (PERSO[pid]['label'], old, c))
                 self.stats['persuade_ok'] += 1
                 self.objective_hit(c, 'persuade', pid)
                 if s['status'] == 'prison' and self.outlawed(old) and not self.outlawed(c):
@@ -835,7 +921,7 @@ class Game:
                 if s['status'] == 'free' and s['loc'] is None and c in self.order:
                     pass
             elif res == 'B' and s['status'] == 'free':
-                self.flee(pid, 'leaves the map (persuasion B)')
+                self.flee(pid, 'quitte la carte (persuasion B)')
 
     def cur_bonus(self, c):
         b = 0
@@ -918,7 +1004,19 @@ class Game:
             pref = 'ABC'
         res = self.roll(c, self.fame[c] + mod, n, pref)
         self.stats['%s_attempts' % kind] += 1
-        self.log('%s %s in %s (x%d, fame %d%+d): %s' % (SHORT[c], kind, r, n, self.fame[c], mod, res))
+        lv_c = self.lvl('commune')
+        outcome = {
+            'plot': {'A': 'réussi, %s prend %s' % (c, rn(r)), 'B': '%s devient neutre' % rn(r), 'C': 'échec'},
+            'revolt': {'A': 'réussi, révolte contrôlée par %s' % c, 'B': 'révolte neutre', 'C': 'échec'},
+            'suppress': {'A': 'réussi, %s prend %s' % (c, rn(r)), 'B': 'révolte calmée, région neutre', 'C': 'échec'},
+            'commune_raise': {'A': 'réussi', 'B': 'réussi' if lv_c == 3 else ('Commune soulevée sans meneur' if lv_c == 2 else 'échec'), 'C': 'échec'},
+            'commune_suppress': {'A': 'réussi', 'B': 'réussi' if lv_c == 1 else ('Commune calmée, Paris neutre' if lv_c == 2 else 'échec'), 'C': 'échec'},
+        }[kind][res]
+        where = ('à ' + rn(r) + ' ') if kind in ('plot', 'revolt', 'suppress') else ''
+        self.log('%s : %s %s(%d jet%s, Renommée %d%+d) → %s' % (
+            c, {'plot': 'complot', 'revolt': 'révolte', 'suppress': 'calmer la révolte',
+                'commune_raise': 'soulever la Commune', 'commune_suppress': 'réprimer la Commune'}[kind],
+            where, n, 's' if n > 1 else '', self.fame[c], mod, outcome))
         if kind == 'plot':
             if res == 'A':
                 self.control[r] = c
@@ -951,7 +1049,6 @@ class Game:
                 self.commune_raised = False
                 self.commune_ctrl = None
                 self.control['Paris'] = c if ok_ctrl else None
-                self.log('Commune suppressed by %s' % SHORT[c])
                 self.objective_hit(c, 'commune_suppress', 'Paris')
 
     def commune_penalty(self, c):
@@ -973,10 +1070,20 @@ class Game:
         return self.commune_penalty(c) is not None
 
     def gov_suppressions(self):
+        if self.gov_human():
+            cands = [r for r in sorted(self.revolt) if not self.armies_in(r, ['allied', 'catholic'])]
+            if cands:
+                mod = -2 + self.bonus['gov_police'] + self.bonus['gov_all']
+                opts = [dict(label='Calmer la révolte à %s%s' % (rn(r), ' (contrôlée par %s)' % self.control[r] if self.control[r] else ''),
+                             cost=150 * self.k(), p=round(p_result(self.fame[GOV] + mod, 'AB'), 3), region=r, infl=True)
+                        for r in cands]
+                ans = self.ask('suppress', 'Le Gouvernement calme des révoltes ? (caisse %d)' % self.gov_money,
+                               opts, multi=True, budget=self.gov_money)
+                self.gov_plan['suppress'] = [(cands[i], max(1, min(3, int(n)))) for i, n in ans]
         for r, n in self.gov_plan.get('suppress', []):
             if r not in self.revolt or self.armies_in(r, ['allied', 'catholic']):
                 continue
-            if 150 * self.k() * n > self.gov_money - self.maint_reserve() or not self.pay(GOV, 150 * self.k() * n):
+            if 150 * self.k() * n > self.gov_money - (0 if self.gov_human() else self.maint_reserve()) or not self.pay(GOV, 150 * self.k() * n):
                 continue
             mod = -2 + self.bonus['gov_police'] + self.bonus['gov_all']
             if self.regime in ('Terror',) and any(self.p[t]['loc'] == r for t in FACTION if FACTION[t] == 'terrorist'):
@@ -984,7 +1091,7 @@ class Game:
             res = self.roll(GOV, self.fame[GOV] + mod, n)
             if res in 'AB':
                 self.revolt.discard(r)
-                self.log('Gov suppresses revolt in %s' % r)
+                self.log('Le Gouvernement calme la révolte à %s' % rn(r))
                 self.objective_hit(GOV, 'suppress', r)
 
     # ================================================================ political phase
@@ -1038,7 +1145,7 @@ class Game:
                 self.deputies[tgt] -= n
                 self.deputies[c] += n
                 self.switched.append((tgt, c, n))
-                self.log('%s attracts %d %s deputies' % (SHORT[c], n, SHORT[tgt]))
+                self.log('%s retourne %d députés %s' % (c, n, tgt))
 
     def switchable(self, t):
         moved_in = sum(n for (a, b, n) in self.switched if b == t)
@@ -1081,7 +1188,7 @@ class Game:
             mode = 'currents'  # VF XV-A2 / VII-E2 : pas de lois du Gouvernement
         proposals = []
         if mode in ('gov', 'both'):
-            for law in self.gov_laws():
+            for law in (self.human_gov_laws() if self.gov_human() else self.gov_laws()):
                 proposals.append((GOV, law))
         if mode in ('currents', 'both'):
             for c in self.order:
@@ -1243,8 +1350,8 @@ class Game:
             if yes == no:
                 tb = self.holder('louis_xvi') if (self.regime == 'Legislative' and self.king == 'free') else self.gov_holder
                 passed = self.law_util(tb, eff) > 0 or tb == proposer
-            self.log('Law %s proposed by %s: %d yes / %d no -> %s' % (
-                law, SHORT[who], yes, no, 'PASSED' if passed else 'rejected'))
+            self.log('Loi « %s » proposée par %s : %d pour, %d contre → %s' % (
+                LAW_FR[law], cn(who), yes, no, 'ADOPTÉE' if passed else 'rejetée'))
         else:
             base = self.fame[GOV] if who == GOV else self.fame[who]
             if self.regime == 'Convention':
@@ -1279,8 +1386,8 @@ class Game:
                 mod += self.lvl('commune')
             res = self.roll(who, base + mod, 1)
             passed = res in 'AB'
-            self.log('Law %s proposed by %s (fame %d%+d): %s' % (
-                law, SHORT[who], base, mod, 'PASSED' if passed else 'rejected'))
+            self.log('Loi « %s » proposée par %s (jet sur Renommée %d%+d) → %s' % (
+                LAW_FR[law], cn(who), base, mod, 'ADOPTÉE' if passed else 'rejetée'))
             if not passed:
                 self.fame_adj(GOV if who == GOV else who, -1, 'law rejected')
                 if who == GOV and self.regime in ('Terror', 'Wrath'):
@@ -1304,7 +1411,7 @@ class Game:
             if cat == 'clergy':
                 veto_eff['fame'][kh] -= 2
             if self.law_util(kh, veto_eff) > self.law_util(kh, eff):
-                self.log('King (%s) vetoes %s' % (SHORT[kh], law))
+                self.log('Le Roi (%s) oppose son veto à « %s »' % (kh, LAW_FR[law]))
                 self.track('commune', 3, 'veto')
                 self.track('clergy', -3, 'veto')
                 if cat == 'clergy':
@@ -1341,7 +1448,7 @@ class Game:
                 if f == fac:
                     self.p[pid]['outlaw'] = True
                     if self.p[pid]['status'] == 'free' and self.p[pid]['loc'] == 'Paris':
-                        self.imprison(pid, 'outlawed while in Paris')
+                        self.imprison(pid, 'hors-la-loi à Paris')
 
     def lawmaker_bonus(self):
         reg, h = self.regime, self.gov_holder
@@ -1362,7 +1469,7 @@ class Game:
     def marais_thermidor_option(self):
         need = self.rejected_wrath if self.regime == 'Wrath' else self.rejected_terror
         if need >= 2 and not self.outlawed(M):
-            if self.prefers(M, 'Thermidor'):
+            if self.wants(M, 'Thermidor'):
                 self.install('Thermidor', M, 'two laws rejected')
                 self.regime_changed_this_phase = True
 
@@ -1390,8 +1497,8 @@ class Game:
         verdict = guilty > innocent or (guilty == innocent and self.law_util(self.gov_holder, eff) > 0)
         if self.trials == 1:
             self.gov_guilty_first = bool(gov_vote)
-        self.log('TRIAL of Louis XVI: %d guilty / %d innocent -> %s' % (
-            guilty, innocent, 'EXECUTED' if verdict else 'spared'))
+        self.log('PROCÈS DE LOUIS XVI : %d coupable, %d non coupable → %s' % (
+            guilty, innocent, 'EXÉCUTÉ' if verdict else 'épargné'))
         sign = 1 if verdict else -1
         self.track('coalition', 5 * sign, 'event')
         self.track('clergy', 5 * sign, 'trial')
@@ -1408,7 +1515,7 @@ class Game:
             return
         self.stats['bankrupt_turn'] = self.turn
         self.stats['bankruptcies'] += 1
-        self.log('!!! BANKRUPTCY (%s)' % why)
+        self.log('!!! BANQUEROUTE (%s)' % why)
         self.fame_adj(self.gov_holder, -5, 'bankruptcy')
         if self.gov_partner:
             self.fame_adj(self.gov_partner, -5, 'bankruptcy')
@@ -1430,7 +1537,7 @@ class Game:
             h = self.holder(pid)
             if reg in ('Legislative', 'Directorate', 'FFR', 'FROI'):
                 if reg == 'Legislative' and self.king == 'free' and self.holder('louis_xvi') in (h,) and h in (R, F):
-                    self.release(pid, 'freed by the King')
+                    self.release(pid, 'par le Roi')
                     continue
                 guilty = innocent = 0
                 for c in CURRENTS:
@@ -1447,7 +1554,7 @@ class Game:
                 else:
                     ok = innocent > guilty
                 if ok:
-                    self.release(pid, 'acquitted')
+                    self.release(pid, 'acquitté')
             else:
                 outlaw = self.p_outlaw(pid)
                 res = self.roll(GOV, self.fame[GOV], 1)
@@ -1459,20 +1566,20 @@ class Game:
                     if res == 'A':
                         self.guillotine(pid)
                     elif res == 'C':
-                        self.release(pid, 'released')
+                        self.release(pid, 'fin de peine')
                 else:
                     if res == 'C':
-                        self.release(pid, 'released')
+                        self.release(pid, 'fin de peine')
 
     def guillotine(self, pid):
         self.kill(pid)
         self.stats['guillotined'] += 1
-        self.log('GUILLOTINE: %s' % PERSO[pid]['label'])
+        self.log('GUILLOTINE : %s' % PERSO[pid]['label'])
 
     def release(self, pid, why):
         self.p[pid]['status'] = 'free'
         self.p[pid]['loc'] = None
-        self.log('%s released (%s)' % (PERSO[pid]['label'], why))
+        self.log('%s est libéré (%s)' % (PERSO[pid]['label'], why))
 
     def criticism(self):
         reg = self.regime
@@ -1480,7 +1587,7 @@ class Game:
             return
         if self.rules == 'FR' and any(t == self.turn and k == 'limited' and ok
                                       for t, _, _, k, _, ok in self.coup_log):
-            self.log('No vote of confidence (limited coup this turn)')
+            self.log('Pas de vote de confiance (coup d\'État limité ce tour)')
             return
         if reg == 'Directorate':
             if self.sole_power_until >= self.turn:
@@ -1503,7 +1610,7 @@ class Game:
                 old = self.gov_partner
                 self.gov_partner = max(cands, key=lambda x: self.deputies[x])
                 self.fame_adj(old, 0)
-                self.log('Directorate partner replaced: %s -> %s' % (SHORT[old], SHORT[self.gov_partner]))
+                self.log('Directoire : %s remplace %s au Gouvernement' % (self.gov_partner, old))
                 self.objectives.pop(GOV, None)
             return
         a, b = CRITICISM[reg]
@@ -1534,7 +1641,7 @@ class Game:
                 elif rg > ro + 0.05:
                     conf += n
         if dis > conf:
-            self.log('VOTE OF NO CONFIDENCE (%d vs %d): %s replaces %s' % (dis, conf, SHORT[opp], SHORT[gov]))
+            self.log('VOTE DE DÉFIANCE (%d contre %d) : %s remplace %s au Gouvernement' % (dis, conf, opp, gov))
             if gov == G:
                 self.gironde_ousted = True
             self.gov_holder = opp
@@ -1553,45 +1660,51 @@ class Game:
         if reg == 'Legislative' and cc in (G, MT, SC) and self.paris_threatened():
             terror_ok = (cc == SC and lvl >= 2) or (cc == MT and lvl == 3)
             options = ['Convention'] + (['Terror'] if terror_ok else [])
-            best = self.best_regime(cc, options + ['Legislative'])
+            if cc == self.human:
+                opts = options + ['Legislative']
+                best = opts[self.ask('regime', 'La Commune que tu tiens et la menace sur Paris te permettent de changer '
+                                     'de régime. Lequel ?', [dict(label=REGIME_FR[o] + (' (rester)' if o == 'Legislative' else ''))
+                                                              for o in opts])]
+            else:
+                best = self.best_regime(cc, options + ['Legislative'])
             if best != 'Legislative':
                 self.install(best, cc, 'Commune + Paris threatened')
                 return
         if reg == 'Convention' and cc:
             ok = (cc == SC and lvl >= 2) or (cc == MT and lvl == 3)
             if ok:
-                if both_war and self.prefers(cc, 'Terror'):
+                if both_war and self.wants(cc, 'Terror'):
                     self.install('Terror', cc, 'Commune during war')
                     return
-                if os_ and some_peace and self.prefers(cc, 'Mercy'):
+                if os_ and some_peace and self.wants(cc, 'Mercy'):
                     self.install('Mercy', cc, 'Commune during peace')
                     return
         if reg == 'Convention' and os_ and some_peace and (not self.commune_raised or cc == G):
-            if self.prefers(G, 'FFR') and self.referendum(G, 'FFR'):
+            if self.wants(G, 'FFR') and self.referendum(G, 'FFR'):
                 self.install('FFR', G, 'referendum')
                 return
         if reg == 'Terror' and os_:
             if ('hebertist' not in self.faction_outlaw and both_war and cc == SC and lvl >= 2 and
                     (self.lvl('economy') == 3 or (self.armies_in('Paris', ENEMY)) or
                      len(self.revolt | self.coal | set(self.regions_of(R))) >= 10)):
-                if self.prefers(SC, 'Wrath'):
+                if self.wants(SC, 'Wrath'):
                     self.install('Wrath', SC, 'conditions')
                     return
             if ('merciful' not in self.faction_outlaw and some_peace and not self.commune_raised
                     and not self.paris_threatened_strict()):
-                if self.prefers(M, 'Mercy'):
+                if self.wants(M, 'Mercy'):
                     self.install('Mercy', M, 'conditions')
                     return
-            if some_peace and cc == MT and self.prefers(MT, 'FROI') and self.referendum(MT, 'FROI'):
+            if some_peace and cc == MT and self.wants(MT, 'FROI') and self.referendum(MT, 'FROI'):
                 self.install('FROI', MT, 'referendum')
                 self.froi_variant = MT
                 return
-        if reg == 'Wrath' and some_peace and self.prefers(SC, 'FROI') and self.referendum(SC, 'FROI'):
+        if reg == 'Wrath' and some_peace and self.wants(SC, 'FROI') and self.referendum(SC, 'FROI'):
             self.install('FROI', SC, 'referendum')
             self.froi_variant = SC
             return
         if reg == 'Mercy' and both_war and cc and ((cc == SC and lvl >= 2) or (cc == MT and lvl == 3)):
-            if self.prefers(cc, 'Terror'):
+            if self.wants(cc, 'Terror'):
                 self.install('Terror', cc, 'Commune during war')
                 return
         if reg == 'Thermidor' and os_ and getattr(self, 'directorate_pending', False):
@@ -1615,7 +1728,7 @@ class Game:
             if self.rank_under(c, new) > self.rank_under(c, self.regime):
                 no += ballots
         ok = no <= 13
-        self.log('Referendum for %s: %d "no" -> %s' % (new, no, 'ADOPTED' if ok else 'rejected'))
+        self.log('Référendum pour %s : %d régions contre → %s' % (REGIME_FR.get(new, new), no, 'adopté' if ok else 'rejeté'))
         if ok and self.rules == 'FR':
             self.fame_adj(proposer, 1, 'referendum')
             if GOV != proposer:
@@ -1629,7 +1742,7 @@ class Game:
         self.regime = new
         self.regime_turn = self.turn
         self.regime_history.append((self.turn, new))
-        self.log('######## NEW REGIME: %s (by %s, %s)' % (new, SHORT.get(who, who), why))
+        self.log('######## NOUVEAU RÉGIME : %s (%s, %s)' % (REGIME_FR.get(new, new), cn(who), why))
         self.stats['regime_changes'] += 1
         self.objective_hit(who, 'regime', new)
         self.faction_outlaw_before = set(self.faction_outlaw)
@@ -1643,7 +1756,7 @@ class Game:
         if new == 'Vendemiaire':
             self.winner = R
             self.ended_early = True
-            self.log('VENDEMIAIRE : the Royalist wins immediately')
+            self.log('VENDÉMIAIRE : le Royaliste gagne immédiatement')
             raise GameOver()
         if new in ('Convention', 'Terror'):
             self.convention_or_terror = True
@@ -1662,7 +1775,7 @@ class Game:
         # prisonniers du courant au pouvoir liberes
         for pid, s in self.p.items():
             if s['status'] == 'prison' and s['holder'] == gov and pid != 'louis_xvi':
-                self.release(pid, 'new regime')
+                self.release(pid, 'nouveau régime')
         cl_co = lambda: (self.track('clergy', 3, 'regime'), self.track('coalition', 3, 'regime'))
         if new == 'Convention':
             cl_co()
@@ -1672,7 +1785,7 @@ class Game:
             cl_co()
             for pid, s in self.p.items():
                 if s['status'] == 'prison' and s['holder'] == MT:
-                    self.release(pid, 'Terror')
+                    self.release(pid, 'Terreur')
             for r in REGIONS:
                 if self.control[r] == G and r != 'Paris':
                     self.revolt.add(r)
@@ -1746,7 +1859,7 @@ class Game:
         # outlaws presents a Paris arretes
         for pid, s in self.p.items():
             if s['status'] == 'free' and s['loc'] == 'Paris' and self.p_outlaw(pid):
-                self.imprison(pid, 'outlaw in Paris at regime change')
+                self.imprison(pid, 'hors-la-loi à Paris au changement de régime')
 
     def hold_election(self, proc):
         n = {c: len([r for r in REGIONS if self.control[r] == c]) for c in CURRENTS}
@@ -1781,7 +1894,7 @@ class Game:
             d[R] = 0
         self.deputies = d
         self.aside = {c: 0 for c in CURRENTS}
-        self.log('ELECTION (%s): %s' % (proc, ', '.join('%s %d' % (SHORT[c], d[c]) for c in CURRENTS)))
+        self.log('ÉLECTIONS : ' + ', '.join('%s %d' % (c, d[c]) for c in CURRENTS if d[c]))
         self.stats['elections'] += 1
 
     def check_elections(self):
@@ -1986,7 +2099,7 @@ class Game:
             res = self.roll(c, self.fame[c] + mod, 1)
             ok = res == 'A'
         self.coup_log.append((self.turn, self.regime, c, kind, target, ok))
-        self.log('COUP %s by %s -> %s : %s' % (kind, SHORT[c], target, 'SUCCESS' if ok else 'FAILURE'))
+        self.log('COUP D\'ÉTAT %s de %s pour %s : %s' % ({'limited': 'limité', 'popular': 'populaire', 'military': 'militaire'}[kind], c, 'le Gouvernement' if target == 'power' else REGIME_FR.get(target, target), 'RÉUSSI' if ok else 'ÉCHEC'))
         if ok:
             self.stats['coup_%s_ok' % kind] += 1
             if kind == 'limited' or target == 'power':
@@ -2015,7 +2128,7 @@ class Game:
             for pid in pids:
                 self.p[pid]['outlaw'] = True
                 self.p[pid]['coup'] = True
-                self.imprison(pid, 'failed coup')
+                self.imprison(pid, 'coup d\'État manqué')
             if kind == 'limited':
                 self.fame_adj(c, -1, 'failed coup')
                 self.temp_outlaw[c] = self.turn + 1
@@ -2044,7 +2157,7 @@ class Game:
             mod += 2
         res = self.roll(c, self.fame[c] + mod, 1)
         if res not in 'AB':
-            self.log('Military coup: rally failed (%s)' % SHORT[c])
+            self.log('Coup militaire de %s : les armées ne suivent pas' % c)
             return False, []   # "if the rally attempt fails, nothing happens"
         for pid in pids:
             self.p[pid]['outlaw'] = True
@@ -2073,7 +2186,7 @@ class Game:
             self.armies[a]['region'] = 'Paris'
         if not win:
             for pid in pids:
-                self.imprison(pid, 'failed military coup')
+                self.imprison(pid, 'coup militaire manqué')
             return False, []
         for pid in pids:
             self.p[pid]['outlaw'] = False
@@ -2108,7 +2221,7 @@ class Game:
                         continue
                 self.armies[aid] = dict(kind='allied', region=d['entry'], step=0, pinned=False, rebel=False)
                 self.allied_state[aid] = 'onmap'
-                self.log('Allied army %s enters at %s' % (d['label'], d['entry']))
+                self.log('L\'armée coalisée %s entre en France (%s)' % (d['label'], rn(d['entry'])))
                 self.stats['allied_entries'] += 1
             self.war_entered = True
         # Vendee
@@ -2126,7 +2239,7 @@ class Game:
                 r = spots[0]
                 self.armies[aid] = dict(kind='catholic', region=r, step=0, pinned=False, rebel=False)
                 self.catholic_state[aid] = 'onmap'
-                self.log('Catholic & Royal army raised in %s' % r)
+                self.log('Une armée catholique et royale se lève à %s' % rn(r))
                 self.stats['catholic_raised'] += 1
         # Gouvernement
         new = self.levee_pending + (1 if self.conscription else 0)
@@ -2143,6 +2256,11 @@ class Game:
         ok = [r for r in REGIONS if self.control[r] != R and not self.armies_in(r, ENEMY) and r not in self.revolt]
         if not ok:
             return None
+        if self.gov_human():
+            ok = sorted(ok)
+            i = self.ask('volunteer', 'Nouvelle armée de volontaires : où la placer ?',
+                         [dict(label=rn(r), region=r) for r in ok])
+            return ok[i]
         enemies = [self.armies[a]['region'] for a in self.enemy_armies()]
         if enemies:
             return min(ok, key=lambda r: min(self.dist(r, e) for e in enemies) + (0 if r in ADJ['Paris'] or r == 'Paris' else 0.5))
@@ -2157,14 +2275,14 @@ class Game:
             if not self.pay(GOV, 100 * k):
                 kind = self.armies[a]['kind']
                 del self.armies[a]
-                self.log('Army %s disbanded (no money)' % a)
+                self.log('Une armée révolutionnaire est dissoute faute d\'argent')
                 if kind == 'regular':
                     self.bankruptcy('regular army unpaid')
         for a in [a for a, s in self.armies.items() if s['kind'] == 'catholic']:
             if not self.pay(R, 100 * k):
                 del self.armies[a]
                 self.catholic_state[a] = 'eliminated'
-                self.log('Catholic army %s disbanded (no money)' % a)
+                self.log('Une armée catholique est dissoute faute d\'argent')
 
     def dist(self, a, b):
         if a == b:
@@ -2232,7 +2350,7 @@ class Game:
             if self.armies_in(nxt, REVOLUTIONARY) or not (nxt in self.coal or self.control[nxt] == R) or (
                     nxt in self.revolt and self.control[nxt] != R):
                 break
-        self.log('Allied %s moves to %s' % (aid, s['region']))
+        self.log('L\'armée coalisée %s avance sur %s' % (ALLIED[aid].get('label', aid), rn(s['region'])))
 
     def royalist_move(self):
         caths = [a for a, s in self.armies.items() if s['kind'] == 'catholic']
@@ -2256,10 +2374,48 @@ class Game:
                 n = max(tgt, key=lambda x: REGIONS[x][0] + (300 if x == 'Paris' else 0))
                 s['region'] = n
                 self.p[gens[0]]['loc'] = n
-                self.log('Catholic army %s moves to %s with %s' % (a, n, PERSO[gens[0]]['label']))
+                self.log('L\'armée catholique avance sur %s avec %s' % (rn(n), PERSO[gens[0]]['label']))
+
+    def human_gov_move(self):
+        h = self.gov_holder
+        free = [a for a in self.rev_armies() if not self.armies[a]['pinned'] and not self.armies[a].get('rebel')]
+        if not free:
+            return
+        if self.commune_raised and self.commune_ctrl not in (h, None):
+            cands = [a for a in free if self.reachable(self.armies[a]['region'], 'Paris')]
+            if len(cands) >= 2 and self.ask_yes_no('crush_commune', 'La Commune est tenue par %s. Envoyer 2 armées '
+                                                   'l\'écraser à Paris (Commune passe à 20, puis combat) ?' % self.commune_ctrl):
+                for a in cands[:2]:
+                    self.armies[a]['region'] = 'Paris'
+                    self.armies[a]['vs_commune'] = True
+                    free.remove(a)
+                self.tracks['commune'] = 20
+                self.log('Le Gouvernement envoie l\'armée contre la Commune')
+        interest = set(self.armies[a]['region'] for a in self.enemy_armies()) | set(self.coal) | set(self.revolt) | {'Paris'}
+        kinds = {'regular': 'régulière', 'volunteer': 'de volontaires', 'temp': 'temporaire'}
+        for a in list(free):
+            src = self.armies[a]['region']
+            dests = [src] + sorted(r for r in interest if r != src and self.reachable(src, r))
+            def tag(r):
+                bits = []
+                n = len(self.armies_in(r, ENEMY))
+                if n:
+                    bits.append('%d armée(s) ennemie(s)' % n)
+                if r in self.coal:
+                    bits.append('occupée')
+                if r in self.revolt:
+                    bits.append('révolte')
+                return ' (%s)' % ', '.join(bits) if bits else ''
+            opts = [dict(label=('Rester à %s' % rn(r) if r == src else 'Aller à %s' % rn(r)) + tag(r), region=r) for r in dests]
+            i = self.ask('move', 'Mouvement : armée %s à %s.' % (kinds.get(self.armies[a]['kind'], ''), rn(src)), opts)
+            if dests[i] != src:
+                self.armies[a]['region'] = dests[i]
+                self.log('Le Gouvernement envoie une armée de %s à %s' % (rn(src), rn(dests[i])))
 
     def gov_move(self):
         h = self.gov_holder
+        if self.gov_human():
+            return self.human_gov_move()
         free = [a for a in self.rev_armies() if not self.armies[a]['pinned'] and not self.armies[a].get('rebel')]
         # 1) cibles : armees ennemies (priorite Paris), puis revoltes
         stacks = defaultdict(int)
@@ -2288,7 +2444,7 @@ class Game:
                         self.armies[a]['vs_commune'] = True
                         free.remove(a)
                     self.tracks['commune'] = 20
-                    self.log('Gov sends armies to crush the Commune')
+                    self.log('Le Gouvernement envoie l\'armée contre la Commune')
         # 2b) regions de la Coalition sans armee ennemie : liberation facile
         for r in sorted(self.coal, key=lambda r: -REGIONS[r][0]):
             if self.armies_in(r, ENEMY) or self.armies_in(r, REVOLUTIONARY):
@@ -2326,13 +2482,13 @@ class Game:
             if res == 'A':
                 self.commune_raised = False
                 self.commune_ctrl = None
-                self.log('Gov armies crush the Commune')
+                self.log('L\'armée écrase la Commune')
                 self.objective_hit(GOV, 'crush_commune', 'Paris')
                 self.stats['commune_crushed'] += 1
             elif res == 'C':
                 a = vs[0]
                 del self.armies[a]
-                self.log('Commune destroys a government army')
+                self.log('La Commune détruit une armée du Gouvernement')
             for a in vs:
                 if a in self.armies:
                     self.armies[a].pop('vs_commune', None)
@@ -2360,8 +2516,8 @@ class Game:
             loser = 'enemy' if rev_att else 'rev'
         elif res == 'C':
             loser = 'rev' if rev_att else 'enemy'
-        self.log('BATTLE %s: %d rev%s vs %d enemy -> %s' % (r, len(rev), '+Commune' if commune else '', nen,
-                                                           {'rev': 'revolution loses one', 'enemy': 'enemy loses one', None: 'no effect'}[loser]))
+        self.log('BATAILLE à %s : %d armée(s) révolutionnaire(s)%s contre %d ennemie(s) → %s' % (rn(r), len(rev), ' + la Commune' if commune else '', nen,
+                                                           {'rev': 'la Révolution perd une armée', 'enemy': 'l\'ennemi perd une armée', None: 'sans effet'}[loser]))
         self.stats['battles'] += 1
         if loser == 'enemy':
             kill = min(en, key=lambda a: self.armies[a]['kind'] == 'allied')
@@ -2396,7 +2552,7 @@ class Game:
                     self.coal.add(r)
                     if self.control[r] != R:
                         self.control[r] = None
-                    self.log('Coalition takes %s' % r)
+                    self.log('La Coalition occupe %s' % rn(r))
                     self.stats['coalition_regions'] += 1
                 if ca:
                     if r in self.coal and not al:
@@ -2404,14 +2560,14 @@ class Game:
                     if self.control[r] != R:
                         self.control[r] = R
                         self.revolt.discard(r) if self.control[r] != R else None
-                        self.log('Royalist army takes %s' % r)
+                        self.log('L\'armée royaliste prend %s' % rn(r))
             elif rev and not al and not ca:
                 if r in self.coal:
                     self.coal.discard(r)
-                    self.log('Revolution frees %s' % r)
+                    self.log('La Révolution libère %s' % rn(r))
                 if r in self.revolt:
                     self.revolt.discard(r)
-                    self.log('Army puts down revolt in %s' % r)
+                    self.log('L\'armée écrase la révolte à %s' % rn(r))
                     self.stats['revolts_crushed_by_army'] += 1
         # enlevement du roi
         if self.king in ('free', 'prison') and self.paris_occupied():
@@ -2422,13 +2578,13 @@ class Game:
                     self.king = 'kidnapped'
                     self.p['louis_xvi']['holder'] = R
                     self.p['louis_xvi']['status'] = 'free'
-                    self.log('*** THE KING IS KIDNAPPED by the Royalist')
+                    self.log('*** LE ROI EST ENLEVÉ par le Royaliste')
                     self.stats['kidnap'] = self.turn
         if self.king == 'kidnapped' and not self.armies_in('Paris', ENEMY):
             self.king = 'prison'
             self.p['louis_xvi']['status'] = 'prison'
             self.auto_trial = True
-            self.log('The King is recaptured')
+            self.log('Le Roi est repris')
         # fin de guerre : plus d'armee alliee en France
         if self.foreign_war and self.war_entered and not any(s['kind'] == 'allied' for s in self.armies.values()):
             pending = any(st in ('pending', 'available') and (ALLIED[a]['wave'] != 1 or not self.war_entered)
@@ -2474,7 +2630,7 @@ class Game:
                         self.fame_adj(self.gov_partner, -1, 'gov objective failed')
                 self.stats['gov_obj_%s' % ('ok' if o['done'] else 'ko')] += 1
             else:
-                self.fame_adj(who, 1 if o['done'] else -1, 'objective %s %s' % (o['kind'], o['target']))
+                self.fame_adj(who, 1 if o['done'] else -1, 'objective %s %s %s' % ('ok' if o['done'] else 'ko', o['kind'], o['target']))
                 self.stats['obj_%s_%s' % (who, 'ok' if o['done'] else 'ko')] += 1
         for cond, fn in self.end_checks:
             if not cond(self):
@@ -2487,7 +2643,7 @@ class Game:
             if self.regime == 'Mercy' and self.turn < 8:
                 ok = ((not self.commune_raised and self.lvl('commune') == 1) or
                       (not self.foreign_war and not self.civil_war()) or MT in self.coup_outlaw)
-                if ok and self.prefers(self.gov_holder, 'Directorate') and self.referendum(self.gov_holder, 'Directorate'):
+                if ok and self.wants(self.gov_holder, 'Directorate') and self.referendum(self.gov_holder, 'Directorate'):
                     self.install('Directorate', self.gov_holder, 'Mercy referendum')
         for c in list(self.temp_outlaw):
             if self.temp_outlaw[c] < self.turn + 1 and self.temp_outlaw[c] <= self.turn:
@@ -2554,6 +2710,13 @@ class Game:
         w, v, ranks, _ = self.outcome(regime)
         return ranks[IDX[c]]
 
+    def wants(self, c, regime):
+        """Decision effective de changer de regime (l'humain choisit)."""
+        if c == self.human:
+            return self.ask_yes_no('regime', 'Tu peux faire passer la France de la %s à : %s. Le faire ?'
+                                   % (REGIME_FR.get(self.regime, self.regime), REGIME_FR.get(regime, regime)))
+        return self.prefers(c, regime)
+
     def prefers(self, c, regime):
         return self.rank_under(c, regime) < self.rank_under(c, self.regime) or (
             self.rank_under(c, regime) == self.rank_under(c, self.regime) and
@@ -2568,8 +2731,8 @@ class Game:
         self.final_vp = v
         self.final_ranks = dict(zip(CURRENTS, ranks))
         self.majority = majority
-        self.log('FINAL: regime %s, winner %s, VP %s' % (
-            self.regime, SHORT[w], ', '.join('%s %d' % (SHORT[c], v[c]) for c in CURRENTS)))
+        self.log('FIN DE LA PARTIE : régime %s, vainqueur %s ; PV %s' % (
+            REGIME_FR.get(self.regime, self.regime), cn(w), ', '.join('%s %d' % (c, v[c]) for c in CURRENTS)))
 
     # ================================================================ IA : planification
     def mv(self, c):
@@ -2765,6 +2928,7 @@ class Game:
         allc = cands + pcands + rcands
         allc.sort(key=lambda x: -x['ev'] / max(1, x['cost']) * 100 - x['ev'])
         if human:
+            self.human_objective(c, allc)
             allc = self.human_plan(c, allc)
         used = set()
         regions_done = set()
@@ -2807,7 +2971,8 @@ class Game:
             obj = fallback[0] if fallback else dict(kind='plot', target='Paris', p=0)
         target = obj.get('target') or obj.get('region')
         kind = obj['kind'] if obj['kind'] != 'remove' else 'plot'
-        self.objectives[c] = dict(kind=kind, target=target, done=False)
+        if not human:
+            self.objectives[c] = dict(kind=kind, target=target, done=False)
         # execution du plan : placement
         for a in chosen:
             if a['kind'] == 'persuade':
@@ -2838,7 +3003,7 @@ class Game:
                              region=a.get('region'), pids=list(a.get('pids', ())), infl=infl))
         ans = self.ask('plan', 'Choisis tes actions du tour (budget %d assignats). Une personnalité '
                        'ne fait qu\'une action ; les autres sont placées automatiquement.' % self.money[c],
-                       opts, multi=True)
+                       opts, multi=True, budget=self.money[c])
         chosen = []
         for i, n in ans:
             a = dict(allc[i])
@@ -2930,6 +3095,19 @@ class Game:
                 best, bu = law, ev
         return best
 
+    def human_gov_laws(self):
+        laws = [law for law in LAWS if law != 'trial' and self.law_allowed(GOV, law)
+                and LAWS[law][0] * self.k() <= self.gov_money]
+        if not laws:
+            return []
+        must = self.rules == 'FR' and LAW_PROPOSERS[self.regime] == 'gov'
+        opts = [dict(label=law_label(law), cost=LAWS[law][0] * self.k(), p=round(self.law_pass_prob(GOV, law), 2), infl=True)
+                for law in laws]
+        ans = self.ask('gov_laws', 'Lois proposées par le Gouvernement (3 au plus%s). Le coût est payé si la loi passe.'
+                       % (', au moins 1' if must else ''), opts, multi=True, budget=self.gov_money,
+                       rolls=False, min=1 if must else 0, max=3)
+        return [laws[i] for i, _ in ans][:3]
+
     def human_law(self, c):
         laws = [law for law in LAWS if law != 'trial' and self.law_allowed(c, law)]
         if self.money[c] < 50 * self.k():
@@ -2975,10 +3153,16 @@ class Game:
         return p_result(base + mod, 'AB')
 
     # ------------------------------------------------------------ IA gouvernement
+    def gov_human(self):
+        return self.human is not None and self.gov_holder == self.human
+
     def plan_government(self):
         h = self.gov_holder
         plan = {'arrests': [], 'suppress': [], 'laws': [], 'suppress_commune': False}
         self.gov_plan = plan
+        if self.gov_human():
+            self.human_gov_objective()
+            return
         k = self.k()
         n_armies = len([a for a in self.rev_armies() if self.armies[a]['kind'] != 'temp'])
         budget = self.gov_money - n_armies * 100 * k - 200 * k
@@ -3041,6 +3225,56 @@ class Game:
             plan['suppress'] = [(x, n) for x, n in plan['suppress'] if x != best_obj[1]]
             plan['suppress'].insert(0, (best_obj[1], 3 if self.gov_money > 1500 * k else 2))
         self.objectives[GOV] = dict(kind=best_obj[0], target=best_obj[1], done=False, holder=h)
+
+    def gov_law_regime(self):
+        return LAW_PROPOSERS[self.regime] in ('gov', 'both') and not (
+            self.rules == 'FR' and self.regime == 'Legislative')
+
+    def human_gov_objective(self):
+        opts = []
+        for pid, s in self.p.items():
+            if s['status'] == 'free' and s['holder'] not in (self.human, self.gov_partner) and self.arrestable(pid):
+                opts.append(dict(label='Arrêter %s (%s)' % (PERSO[pid]['label'], s['holder']), kind='arrest', target=pid))
+        for r in sorted(self.revolt):
+            opts.append(dict(label='Calmer la révolte à %s' % rn(r), kind='suppress', target=r))
+        for r in sorted({self.armies[a]['region'] for a in self.enemy_armies()}):
+            opts.append(dict(label='Vaincre les armées ennemies à %s' % rn(r), kind='army', target=r))
+        if self.gov_law_regime():
+            for law in LAWS:
+                if law != 'trial' and self.law_allowed(GOV, law):
+                    opts.append(dict(label='Faire adopter : %s' % LAW_FR[law], kind='law', target=law))
+        if not opts:
+            opts.append(dict(label='Faire adopter une loi civique', kind='law', target='civic'))
+        i = self.ask('objective', 'Objectif du Gouvernement pour ce tour (réussi : Renommée du Gouvernement +1 ; '
+                     'manqué : -1 au Gouvernement et à ton courant).', opts)
+        o = opts[i]
+        self.objectives[GOV] = dict(kind=o['kind'], target=o['target'], done=False, holder=self.gov_holder)
+
+    def human_objective(self, c, cands):
+        opts, seen = [], set()
+        for a in cands:
+            kind = a['kind'] if a['kind'] != 'remove' else None
+            if not kind:
+                continue
+            tgt = a.get('target') or a.get('region')
+            if (kind, tgt) in seen:
+                continue
+            seen.add((kind, tgt))
+            name = PERSO[tgt]['label'] if kind == 'persuade' else rn(tgt)
+            opts.append(dict(label='%s : %s' % ({'plot': 'Réussir un complot', 'revolt': 'Réussir une révolte',
+                                                 'suppress': 'Calmer la révolte', 'persuade': 'Persuader',
+                                                 'commune_raise': 'Soulever la Commune',
+                                                 'commune_suppress': 'Réprimer la Commune'}[kind], name),
+                             kind=kind, target=tgt, region=a.get('region')))
+        if self.official(c) and (LAW_PROPOSERS[self.regime] in ('currents', 'both') or self.regime == 'Legislative'):
+            for law in LAWS:
+                if law != 'trial' and self.law_allowed(c, law):
+                    opts.append(dict(label='Faire adopter : %s' % LAW_FR[law], kind='law', target=law))
+        opts.sort(key=lambda o: (o['kind'] == 'law', o['kind'] == 'persuade', o['label']))
+        i = self.ask('objective', 'Ton objectif du tour (réussi : Renommée +1 ; manqué : -1). '
+                     'Tu choisis ensuite tes actions.', opts)
+        o = opts[i]
+        self.objectives[c] = dict(kind=o['kind'], target=o['target'], done=False)
 
     def gov_laws(self, preview=False):
         h = self.gov_holder

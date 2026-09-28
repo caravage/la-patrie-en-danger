@@ -164,7 +164,7 @@ def feed_people(g):
 
 
 def conv_bread(g):
-    g.gov_decide('bread', yes=gov_pay(300),
+    g.gov_decide('bread_conv', yes=gov_pay(300),
                  no=seq(track('commune', +2), fame(GOV, -1), fame(G, -1)))
 
 

@@ -87,6 +87,7 @@ table.cur { border-collapse: collapse; width: 100%; font-size: 14px; }
 table.cur th { text-align: right; font-weight: 600; font-size: 12px; color: var(--muted); padding: 3px 6px; border-bottom: 1px solid var(--line); }
 table.cur th:first-child, table.cur td:first-child { text-align: left; }
 table.cur td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.cur td:first-child { white-space: normal; }
 table.cur tr.me td { background: var(--accent-soft); }
 .sw { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 9px; border: 1px solid var(--line); color: var(--muted); margin-left: 4px; }
@@ -144,7 +145,7 @@ table.cur tr.me td { background: var(--accent-soft); }
   <div class="col">
     <section class="card" id="start" hidden>
       <h2>Choisis ton courant</h2>
-      <p>Tu joues un courant ; les cinq autres sont joués par l'ordinateur. Règles du livret français de 1995, scénario historique, sans négociation. Le Gouvernement est toujours géré par l'ordinateur, même quand ton courant le contrôle.</p>
+      <p>Tu joues un courant ; les cinq autres sont joués par l'ordinateur. Règles du livret français de 1995, scénario historique, sans négociation. Quand ton courant tient le Gouvernement, c'est toi qui le diriges (objectif, arrestations, révoltes, lois, armées, événements).</p>
       <div class="grid" id="picks"></div>
       <div class="planfoot">
         <label for="seed">Partie n°</label>
@@ -214,7 +215,7 @@ const REG_XY = { Lille: [1940, 210], Amiens: [2100, 380], Rouen: [1750, 530], Pa
   Montpellier: [2030, 1900] };
 const REG_FR = { Orleans: 'Orléans', Angouleme: 'Angoulême', Nimes: 'Nîmes' };
 const PY_FILES = ['lpd_data.py', 'lpd_events.py', 'lpd_engine.py', 'lpd_play.py'];
-const STORE = 'lpd-solo-v1';
+const STORE = 'lpd-solo-v2';
 
 const $ = (id) => document.getElementById(id);
 let py = null, stepFn = null;
@@ -326,9 +327,12 @@ function renderCurrents(s) {
   h += `<tr><td><i class="sw" style="background:var(--c-gov)"></i>Gouvernement</td><td class="num">${s.fame.Government}</td><td class="num">${s.gov_money}</td><td></td><td></td><td></td></tr>`;
   $('cur').innerHTML = h;
   const o = s.objective;
+  const og = s.gov_objective;
   const KIND = { plot: 'complot', revolt: 'révolte', suppress: 'calmer une révolte', persuade: 'persuader',
-    commune_raise: 'soulever la Commune', commune_suppress: 'réprimer la Commune', law: 'faire voter une loi', regime: 'régime' };
-  $('obj').textContent = (o ? `Ton objectif du tour : ${KIND[o.kind] || o.kind} → ${rname(o.target)}. ` : '') +
+    commune_raise: 'soulever la Commune', commune_suppress: 'réprimer la Commune', law: 'faire adopter', regime: 'régime', arrest: 'arrêter', army: 'victoire militaire', crush_commune: 'écraser la Commune' };
+  const tname = (t) => (s.personalities.find((p) => p.id === t) || {}).label || s.law_names[t] || rname(t);
+  $('obj').textContent = (o ? `Ton objectif du tour : ${KIND[o.kind] || o.kind} → ${tname(o.target)}. ` : '') +
+    (og && s.gov_holder === game.human ? `Objectif du Gouvernement : ${KIND[og.kind] || og.kind} → ${tname(og.target)}. ` : '') +
     `Ordre du tour : ${s.order.join(' › ')}. Roi : ${{ free: 'libre', prison: 'emprisonné', dead: 'exécuté', kidnapped: 'enlevé' }[s.king] || s.king}. ` +
     `Commune : ${s.commune.raised ? 'soulevée' + (s.commune.ctrl ? ' (' + s.commune.ctrl + ')' : '') : 'calme'}.`;
 }
@@ -369,6 +373,7 @@ function renderMap(s) {
     b.classList.toggle('revolt', s.revolt.includes(r));
     b.classList.toggle('coal', s.coal.includes(r));
     b.classList.toggle('sel', selRegion === r);
+    b.classList.remove('hl');
     b.querySelector('.pips').innerHTML =
       (here[r] || []).map((p) => `<i class="pip" title="${esc(p.label)}" style="background:${COLOR[p.holder]}"></i>`).join('') +
       (arms[r] || []).map((a) => `<i class="arm ${a.kind === 'allied' || a.kind === 'catholic' ? a.kind : 'rev'}"></i>`).join('');
@@ -384,13 +389,13 @@ function renderMap(s) {
 }
 
 function renderLog() {
-  const me = SHORT[game.human];
+  const me = game.human;
   const lines = last.log;
   let h = '';
   for (const l of lines) {
     const msg = l.slice(l.indexOf('|') + 2);
     if (msg.startsWith('=====')) { h += `<div class="turnhead">${esc(msg.replace(/=+/g, '').trim())}</div>`; continue; }
-    const cls = msg.includes(me) ? 'me' : /NEW REGIME|COUP|TRIAL|GUILLOTINE|BANKRUPTCY|WAR|CONFIDENCE/.test(msg) ? 'big' : '';
+    const cls = msg.includes(me) ? 'me' : /NOUVEAU RÉGIME|COUP D'ÉTAT|PROCÈS|GUILLOTINE|BANQUEROUTE|GUERRE|PAIX|DÉFIANCE|ÉLECTIONS|BATAILLE|FIN DE LA PARTIE/.test(msg) ? 'big' : '';
     h += `<div class="${cls}">${esc(msg)}</div>`;
   }
   const el = $('log');
@@ -413,53 +418,67 @@ function renderAsk() {
     const rank = CURRENTS.slice().sort((x, y) => s.vp[y] - s.vp[x]);
     a.innerHTML = `<h2>Fin de la partie</h2><p class="winner">Vainqueur : ${esc(last.winner || '—')}</p>` +
       `<p>Points de victoire : ${rank.map((c) => `${c} ${s.vp[c]}`).join(' · ')}</p>` +
+      `<p class="hint">Le vainqueur n'est pas forcément le premier aux points : il dépend du régime en place et de la majorité, révolutionnaire ou réactionnaire (Feuillant et Marais sont réactionnaires à 25 PV ou plus ; Gironde, Montagne et Sans-Culotte sont révolutionnaires à 25 PV ou plus). ${last.majority ? 'Majorité de cette partie : ' + (last.majority === 'rev' ? 'révolutionnaire' : 'réactionnaire') + '.' : ''}</p>` +
       `<button class="btn primary" id="again">Nouvelle partie</button>`;
     $('again').onclick = () => { try { localStorage.removeItem(STORE); } catch (e) {} showStart(); };
     return;
   }
   const q = last.question;
   if (q.multi) return renderPlan(q);
-  a.innerHTML = `<h2>À toi de jouer</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts">` +
-    q.options.map((o, i) => `<button class="opt" data-i="${i}"><span>${esc(o.label)}</span><span class="info">${info(o)}</span></button>`).join('') + '</div>';
-  a.querySelectorAll('.opt').forEach((b) => b.onclick = () => answer(parseInt(b.dataset.i, 10)));
+  a.innerHTML = `<h2>${askTitle(q)}</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts">` +
+    q.options.map((o, i) => `<button class="opt" data-i="${i}" data-r="${o.region || ''}"><span>${esc(o.label)}</span><span class="info">${info(o)}</span></button>`).join('') + '</div>';
+  a.querySelectorAll('.opt').forEach((b) => {
+    b.onclick = () => answer(parseInt(b.dataset.i, 10));
+    hoverRegion(b);
+  });
+}
+
+const GOV_KEYS = ['arrests', 'suppress', 'gov_laws', 'volunteer', 'move', 'crush_commune', 'gov_event'];
+function askTitle(q) {
+  if (GOV_KEYS.includes(q.key) || (q.key === 'objective' && /Gouvernement/.test(q.prompt))) return 'À toi de jouer : le Gouvernement';
+  return { objective: 'À toi de jouer : ton objectif', plan: 'À toi de jouer : tes actions', vote: 'À toi de jouer : vote',
+    confidence: 'À toi de jouer : vote de confiance', trial: 'À toi de jouer : procès du Roi' }[q.key] || 'À toi de jouer';
+}
+function hoverRegion(el) {
+  const r = el.dataset.r;
+  if (!r) return;
+  el.onmouseenter = () => document.querySelector(`.reg[data-r="${r}"]`)?.classList.add('hl');
+  el.onmouseleave = () => document.querySelector(`.reg[data-r="${r}"]`)?.classList.remove('hl');
 }
 
 function renderPlan(q) {
   const a = $('ask');
-  const budget = last.state.money[game.human];
-  a.innerHTML = `<h2>À toi de jouer : tes actions</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts" id="plan">` +
-    q.options.map((o, i) => `<label class="planrow" data-i="${i}" data-r="${o.region || ''}"${o.infl ? '' : ' hidden'}>
+  const budget = q.budget != null ? q.budget : last.state.money[game.human];
+  const rolls = q.rolls !== false;
+  const mn = q.min || 0, mx = q.max || 99;
+  a.innerHTML = `<h2>${askTitle(q)}</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts" id="plan">` +
+    q.options.map((o, i) => `<label class="planrow" data-i="${i}" data-r="${o.region || ''}"${o.infl === false ? ' hidden' : ''}>
       <input type="checkbox" id="pl${i}">
       <span>${esc(o.label)}</span>
-      <select id="pn${i}" aria-label="Nombre de jets">${[1, 2, 3].map((n) => `<option value="${n}">${n} jet${n > 1 ? 's' : ''}</option>`).join('')}</select>
+      <select id="pn${i}" aria-label="Nombre de jets"${rolls ? '' : ' hidden'}>${[1, 2, 3].map((n) => `<option value="${n}">${n} jet${n > 1 ? 's' : ''}</option>`).join('')}</select>
       <span class="info num" id="pi${i}"></span></label>`).join('') +
-    `</div>${q.options.some((o) => !o.infl) ? `<button class="btn" id="pall" style="margin-top:8px">Voir aussi les actions sans personnalité influente (${q.options.filter((o) => !o.infl).length})</button>` : ''}<div class="planfoot"><span>Total : <span class="total num" id="ptot">0</span> / ${budget} assignats</span>
-      <button class="btn primary" id="pgo">Valider mes actions</button></div>
-    <p class="hint">Par défaut, seules les actions où une de tes personnalités a de l'influence (+2) sont listées. % = chance de succès avec le nombre de jets choisi (on garde le meilleur jet). Coût ×2 en Économie II, ×3 en III, déjà compté.</p>`;
+    `</div>${q.options.some((o) => o.infl === false) ? `<button class="btn" id="pall" style="margin-top:8px">Voir aussi les actions sans personnalité influente (${q.options.filter((o) => o.infl === false).length})</button>` : ''}<div class="planfoot"><span>Total : <span class="total num" id="ptot">0</span> / ${budget} assignats</span>
+      <button class="btn primary" id="pgo">Valider</button></div>
+    <p class="hint">${q.key === 'plan' ? "Par défaut, seules les actions où une de tes personnalités a de l'influence (+2) sont listées. " : ''}${rolls ? '% = chance de succès avec le nombre de jets choisi (on garde le meilleur jet). ' : ''}Coût ×2 en Économie II, ×3 en III, déjà compté.${mn ? ` Choisis-en au moins ${mn}.` : ''}${mx < 99 ? ` ${mx} au plus.` : ''}</p>`;
   const upd = () => {
-    let tot = 0;
+    let tot = 0, cnt = 0;
     q.options.forEach((o, i) => {
-      const n = parseInt($('pn' + i).value, 10), on = $('pl' + i).checked;
-      const p = 1 - Math.pow(1 - o.p, n);
-      $('pi' + i).textContent = `${o.cost * n} as. · ${Math.round(p * 100)} %`;
+      const n = rolls ? parseInt($('pn' + i).value, 10) : 1, on = $('pl' + i).checked;
+      const p = 1 - Math.pow(1 - (o.p || 0), n);
+      $('pi' + i).textContent = `${(o.cost || 0) * n} as.` + (o.p != null ? ` · ${Math.round(p * 100)} %` : '');
       a.querySelector(`.planrow[data-i="${i}"]`).classList.toggle('on', on);
-      if (on) tot += o.cost * n;
+      if (on) { tot += (o.cost || 0) * n; cnt++; }
     });
     $('ptot').textContent = tot;
     $('ptot').classList.toggle('over', tot > budget);
-    $('pgo').disabled = tot > budget;
+    $('pgo').disabled = tot > budget || cnt < mn || cnt > mx;
   };
   a.querySelectorAll('input, select').forEach((el) => el.onchange = upd);
   if ($('pall')) $('pall').onclick = () => { a.querySelectorAll('.planrow[hidden]').forEach((r) => r.hidden = false); $('pall').remove(); };
-  a.querySelectorAll('.planrow').forEach((row) => {
-    const r = row.dataset.r;
-    if (!r) return;
-    row.onmouseenter = () => document.querySelector(`.reg[data-r="${r}"]`)?.classList.add('hl');
-    row.onmouseleave = () => document.querySelector(`.reg[data-r="${r}"]`)?.classList.remove('hl');
-  });
+  a.querySelectorAll('.planrow').forEach(hoverRegion);
   $('pgo').onclick = () => {
     const ans = [];
-    q.options.forEach((o, i) => { if ($('pl' + i).checked) ans.push([i, parseInt($('pn' + i).value, 10)]); });
+    q.options.forEach((o, i) => { if ($('pl' + i).checked) ans.push([i, rolls ? parseInt($('pn' + i).value, 10) : 1]); });
     answer(ans);
   };
   upd();

@@ -339,8 +339,10 @@ aussi d'annuler un choix.
   du paquet npm `pyodide`, et `python_stdlib.zip` encodé en base64 sous le nom
   `python_stdlib.b64.txt`).
 
-Le Gouvernement reste toujours joué par l'ordinateur, même quand le courant
-du joueur le contrôle.
+Quand le courant du joueur tient le Gouvernement, le joueur le dirige :
+objectif, arrestations, révoltes, lois, armées et décisions d'événements.
+Le joueur choisit aussi l'objectif de son courant à chaque tour. Le journal
+de partie est en français.
 
 ## Droits
 
