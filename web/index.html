@@ -113,6 +113,23 @@ table.cur tr.me td { background: var(--accent-soft); }
 .planfoot .total.over { color: var(--accent); font-weight: 700; }
 .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
 
+/* deroule du tour */
+.phases { display: grid; gap: 8px; }
+.phase { display: grid; grid-template-columns: 118px 1fr; gap: 8px; align-items: start; }
+.phase .pname { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.steps { display: flex; flex-wrap: wrap; gap: 4px; }
+.st { font-size: 13px; border: 1px solid var(--line); border-radius: 12px; padding: 1px 9px; color: var(--muted); background: var(--ground); }
+.st.done { color: var(--ink); border-color: var(--line); opacity: .7; }
+.st.done::before { content: "✓ "; }
+.st.now { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; opacity: 1; }
+@media (max-width: 560px) { .phase { grid-template-columns: 1fr; gap: 2px; } }
+.steplines { display: flex; flex-direction: column; gap: 3px; margin: 6px 0 12px; font-size: 14px; }
+.steplines .me { font-weight: 700; }
+.steplines .big { color: var(--accent); font-weight: 600; }
+.steplines .ev { border-left: 3px solid var(--line); padding-left: 8px; }
+.stepnum { display: inline-block; min-width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; text-align: center; font: 700 14px/26px var(--body); margin-right: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+#log .stephead { font-weight: 600; margin-top: 5px; color: var(--muted); }
 /* journal */
 #log { max-height: 420px; overflow: auto; font-size: 13px; line-height: 1.35; }
 #log div { padding: 1px 0; }
@@ -153,6 +170,10 @@ table.cur tr.me td { background: var(--accent-soft); }
         <button class="btn primary" id="go" disabled>Commencer</button>
       </div>
       <p class="hint">Le même numéro de partie avec les mêmes choix donne toujours la même partie.</p>
+    </section>
+    <section class="card" id="flow" hidden>
+      <h2 id="flowtitle">Déroulé du tour</h2>
+      <div class="phases" id="phases"></div>
     </section>
     <section class="card" id="ask" hidden></section>
     <section class="card">
@@ -214,8 +235,20 @@ const REG_XY = { Lille: [1940, 210], Amiens: [2100, 380], Rouen: [1750, 530], Pa
   Bordeaux: [1594, 1554], Cahors: [1860, 1686], Nimes: [2274, 1624], Marseille: [2540, 1720], Toulouse: [1516, 1896],
   Montpellier: [2030, 1900] };
 const REG_FR = { Orleans: 'Orléans', Angouleme: 'Angoulême', Nimes: 'Nîmes' };
-const PY_FILES = ['lpd_data.py', 'lpd_events.py', 'lpd_engine.py', 'lpd_play.py'];
-const STORE = 'lpd-solo-v2';
+const PY_FILES = ['lpd_data.py', 'lpd_events.py', 'lpd_events_fr.py', 'lpd_engine.py', 'lpd_play.py'];
+const PHASES = [['Phase initiale', [1, 2, 3, 4, 5]], ["Phase d'action", [6, 7, 8]], ['Phase des patriotes', [9, 10]],
+  ['Phase militaire', [11, 12, 13]], ['Interphase', [14, 15, 16]]];
+const STEP = { 1: 'Négociations', 2: 'Événements aléatoires', 3: 'Ordre du tour', 4: 'Objectifs', 5: 'Placement des personnalités',
+  6: 'Actions des personnalités', 7: 'Actions régionales', 8: 'Phase politique', 9: 'Justice', 10: 'Débats',
+  11: 'Renforts', 12: 'Mouvements', 13: 'Combats', 14: 'Économie', 15: 'Revenus', 16: 'Ajustement de la Renommée' };
+const STEP_HELP = { 1: 'Discussions entre joueurs ; aucune avec l\'ordinateur.', 2: 'Un jet sur chacune des 4 tables du régime.',
+  3: 'Gouvernement, puis courants par Renommée + régions.', 4: 'Chacun annonce un objectif : +1 Renommée s\'il est atteint, -1 sinon.',
+  5: 'Chacun place ses personnalités sur la carte, dans l\'ordre du tour.', 6: 'Arrestations, expulsions, persuasions de personnalités.',
+  7: 'Complots, révoltes, révoltes calmées, Commune.', 8: 'Changement de régime, élections, députés retournés, action du Roi, lois.',
+  9: 'Les prisonniers sont jugés.', 10: 'Vote de confiance, puis les députés retournés reviennent.', 11: 'Armées coalisées, catholiques et du Gouvernement ; entretien.',
+  12: 'Coups d\'État, puis mouvements des armées.', 13: 'Batailles et contrôle militaire.', 14: 'Économie +1 par tranche de 1000 assignats dépensés.',
+  15: 'Revenus des régions et du Gouvernement.', 16: 'Objectifs atteints ou manqués.' };
+const STORE = 'lpd-solo-v3';
 
 const $ = (id) => document.getElementById(id);
 let py = null, stepFn = null;
@@ -260,6 +293,7 @@ async function boot() {
 function showStart() {
   last = null;
   $('ask').hidden = true;
+  $('flow').hidden = true;
   $('start').hidden = false;
   $('undo').disabled = true;
   $('status').textContent = 'Prêt.';
@@ -272,7 +306,7 @@ function showStart() {
     $('go').disabled = false;
   });
   $('go').onclick = () => {
-    game = { seed: parseInt($('seed').value, 10) || 1, human: pick, answers: [] };
+    game = { seed: parseInt($('seed').value, 10) || 1, human: pick, answers: [], revealed: 0 };
     $('start').hidden = true;
     run();
   };
@@ -296,8 +330,50 @@ function run() {
 
 function answer(a) { game.answers.push(a); run(); }
 
+// decoupe le journal en etapes : { turn, step, lines, end }
+function segments() {
+  const segs = [];
+  let cur = null, turn = 0;
+  last.log.forEach((l, i) => {
+    const t = parseInt(l.slice(1), 10);
+    if (t) turn = t;
+    const msg = l.slice(l.indexOf('|') + 2);
+    if (msg.startsWith('§')) {
+      if (cur) cur.end = i;
+      cur = { turn, step: parseInt(msg.slice(1), 10), lines: [], end: last.log.length };
+      segs.push(cur);
+    } else if (cur && !msg.startsWith('=====')) cur.lines.push(msg);
+  });
+  return segs;
+}
+function stateAfter(seg) {
+  const sn = (last.snaps || []).find((x) => x.upto === seg.end);
+  return sn ? sn.state : last.state;
+}
+function lineClass(msg) {
+  if (msg.startsWith('Événement')) return 'ev';
+  if (msg.includes(game.human)) return 'me';
+  return /NOUVEAU RÉGIME|COUP D'ÉTAT|PROCÈS|GUILLOTINE|BANQUEROUTE|GUERRE|PAIX|DÉFIANCE|ÉLECTIONS|BATAILLE|FIN DE LA PARTIE/.test(msg) ? 'big' : '';
+}
+function linesHtml(lines) {
+  if (!lines.length) return '<div class="steplines"><div>Rien à signaler.</div></div>';
+  return '<div class="steplines">' + lines.map((m) => `<div class="${lineClass(m)}">${esc(m)}</div>`).join('') + '</div>';
+}
+function renderFlow(seg) {
+  $('flow').hidden = false;
+  $('flowtitle').textContent = `Déroulé du tour ${seg.turn}`;
+  $('phases').innerHTML = PHASES.map(([name, steps]) => `<div class="phase"><span class="pname">${name}</span><div class="steps">` +
+    steps.map((n) => `<span class="st ${n < seg.step ? 'done' : n === seg.step ? 'now' : ''}" title="${esc(STEP_HELP[n])}">${n}. ${STEP[n]}</span>`).join('') +
+    '</div></div>').join('');
+}
+
 function render() {
-  const s = last.state;
+  const segs = segments();
+  if (game.revealed == null || game.revealed > segs.length - 1) game.revealed = Math.max(0, segs.length - 1);
+  const revealing = !last.over && game.revealed < segs.length - 1;
+  const seg = segs[revealing ? game.revealed : segs.length - 1];
+  const s = revealing ? stateAfter(seg) : last.state;
+  if (seg) renderFlow(seg);
   $('undo').disabled = !game.answers.length;
   $('meta').innerHTML = `<span>Tu joues <b style="color:${COLOR[game.human]}">${game.human}</b></span>` +
     `<span>Tour <b class="num">${s.turn}</b>/8 · ${PERIOD[s.turn] || ''}</span>` +
@@ -308,8 +384,21 @@ function render() {
   renderCurrents(s);
   renderTracks(s);
   renderMap(s);
-  renderLog();
-  renderAsk();
+  renderLog(revealing ? seg.end : last.log.length);
+  if (revealing) renderReveal(seg, segs);
+  else renderAsk(seg);
+}
+
+function renderReveal(seg, segs) {
+  const a = $('ask');
+  a.hidden = false;
+  a.innerHTML = `<h2><span class="stepnum">${seg.step}</span>${STEP[seg.step]}</h2><p class="hint">${esc(STEP_HELP[seg.step])}</p>` +
+    linesHtml(seg.lines) +
+    `<div class="row"><button class="btn primary" id="nextstep">Étape suivante : ${STEP[segs[game.revealed + 1].step]}</button>` +
+    `<button class="btn" id="skipsteps">Aller directement à mon prochain choix</button></div>`;
+  $('nextstep').onclick = () => { game.revealed++; save(); render(); };
+  $('skipsteps').onclick = () => { game.revealed = segs.length - 1; save(); render(); };
+  $('nextstep').focus();
 }
 
 function renderCurrents(s) {
@@ -388,15 +477,14 @@ function renderMap(s) {
   }
 }
 
-function renderLog() {
-  const me = game.human;
-  const lines = last.log;
+function renderLog(upto) {
+  const lines = last.log.slice(0, upto);
   let h = '';
   for (const l of lines) {
     const msg = l.slice(l.indexOf('|') + 2);
     if (msg.startsWith('=====')) { h += `<div class="turnhead">${esc(msg.replace(/=+/g, '').trim())}</div>`; continue; }
-    const cls = msg.includes(me) ? 'me' : /NOUVEAU RÉGIME|COUP D'ÉTAT|PROCÈS|GUILLOTINE|BANQUEROUTE|GUERRE|PAIX|DÉFIANCE|ÉLECTIONS|BATAILLE|FIN DE LA PARTIE/.test(msg) ? 'big' : '';
-    h += `<div class="${cls}">${esc(msg)}</div>`;
+    if (msg.startsWith('§')) { const n = parseInt(msg.slice(1), 10); h += `<div class="stephead">${n}. ${STEP[n]}</div>`; continue; }
+    h += `<div class="${lineClass(msg)}">${esc(msg)}</div>`;
   }
   const el = $('log');
   el.innerHTML = h;
@@ -410,7 +498,7 @@ function info(o) {
   return b.join(' · ');
 }
 
-function renderAsk() {
+function renderAsk(seg) {
   const a = $('ask');
   a.hidden = false;
   if (last.over) {
@@ -424,8 +512,10 @@ function renderAsk() {
     return;
   }
   const q = last.question;
-  if (q.multi) return renderPlan(q);
-  a.innerHTML = `<h2>${askTitle(q)}</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts">` +
+  const head = seg ? `<p class="label"><span class="stepnum">${seg.step}</span>${STEP[seg.step]}</p>` +
+    (seg.lines.length ? `<details><summary class="hint">Déjà joué à cette étape (${seg.lines.length})</summary>${linesHtml(seg.lines)}</details>` : '') : '';
+  if (q.multi) return renderPlan(q, head);
+  a.innerHTML = head + `<h2>${askTitle(q)}</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts">` +
     q.options.map((o, i) => `<button class="opt" data-i="${i}" data-r="${o.region || ''}"><span>${esc(o.label)}</span><span class="info">${info(o)}</span></button>`).join('') + '</div>';
   a.querySelectorAll('.opt').forEach((b) => {
     b.onclick = () => answer(parseInt(b.dataset.i, 10));
@@ -446,12 +536,12 @@ function hoverRegion(el) {
   el.onmouseleave = () => document.querySelector(`.reg[data-r="${r}"]`)?.classList.remove('hl');
 }
 
-function renderPlan(q) {
+function renderPlan(q, head) {
   const a = $('ask');
   const budget = q.budget != null ? q.budget : last.state.money[game.human];
   const rolls = q.rolls !== false;
   const mn = q.min || 0, mx = q.max || 99;
-  a.innerHTML = `<h2>${askTitle(q)}</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts" id="plan">` +
+  a.innerHTML = (head || '') + `<h2>${askTitle(q)}</h2><div class="prompt">${esc(q.prompt)}</div><div class="opts" id="plan">` +
     q.options.map((o, i) => `<label class="planrow" data-i="${i}" data-r="${o.region || ''}"${o.infl === false ? ' hidden' : ''}>
       <input type="checkbox" id="pl${i}">
       <span>${esc(o.label)}</span>
@@ -484,7 +574,7 @@ function renderPlan(q) {
   upd();
 }
 
-$('undo').onclick = () => { if (game && game.answers.length) { game.answers.pop(); run(); } };
+$('undo').onclick = () => { if (game && game.answers.length) { game.answers.pop(); game.revealed = null; run(); } };
 $('restart').onclick = () => { try { localStorage.removeItem(STORE); } catch (e) {} if (stepFn) showStart(); };
 boot();
 </script>

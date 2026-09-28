@@ -14,6 +14,7 @@ from lpd_data import (R, F, M, G, MT, SC, GOV, CURRENTS, SHORT, REGIONS, ADJ, VE
                       PROVISIONAL, DEPUTY_TARGETS, VICTORY_FAMILY, ALSO_RANS, ALLIED,
                       REGULARS, CATHOLIC, VENDEE_ROUTE)
 from lpd_events import EVENTS
+from lpd_events_fr import EVENT_TEXT
 
 IDX = {c: i for i, c in enumerate(CURRENTS)}
 REVOLUTIONARY = ('regular', 'volunteer', 'temp')
@@ -712,17 +713,33 @@ class Game:
             pass
         return self
 
+    def step(self, n):
+        """Marque le debut d'une etape de la sequence de jeu (aide de jeu, 16 etapes)."""
+        if getattr(self, 'on_step', None):
+            self.on_step()
+        self.log('§%d' % n)
+
     def play_turn(self):
         self.start_turn()
+        self.step(1)
+        self.log('Pas de négociation avec l\'ordinateur.')
+        self.step(2)
         self.random_events()
+        self.step(3)
         self.turn_order()
-        self.plan_and_place()
+        self.plan_and_place()      # etapes 4 et 5
+        self.step(6)
         self.personality_actions()
+        self.step(7)
         self.regional_actions()
+        self.step(8)
         self.political_phase()
-        self.patriot_phase()
-        self.military_phase()
-        self.interphase()
+        self.step(9)
+        self.justice()
+        self.step(10)
+        self.patriot_debates()
+        self.military_phase()      # etapes 11 a 13
+        self.interphase()          # etapes 14 a 16
         self.fame_history.append(dict(self.fame))
         self.regions_history.append({c: len(self.regions_of(c)) for c in CURRENTS})
 
@@ -757,7 +774,8 @@ class Game:
             s = self.d6() + self.d6() + mod_fn(self)
             s = max(2, min(12, s))
             self.events_log.append((self.turn, self.regime, cat, s))
-            self.log('Événement %s (jet %d)' % (EVENT_FR[cat], s))
+            txt = EVENT_TEXT.get(self.regime, {}).get(cat, {}).get(s, '')
+            self.log('Événement %s (jet %d) : %s' % (EVENT_FR[cat], s, txt or 'voir la table'))
             fn = tbl.get(s)
             if fn:
                 fn(self)
@@ -793,9 +811,39 @@ class Game:
         lx = self.p['louis_xvi']
         if lx['status'] == 'free':
             lx['loc'] = 'Paris'
+        self.step(4)
         self.plan_government()
+        if GOV in self.objectives:
+            self.log('Objectif du Gouvernement (%s) : %s' % (self.gov_holder, self.objective_text(self.objectives[GOV])))
         for c in self.order:
-            self.plan_current(c)
+            if c == self.human:
+                self.human_objective(c)
+            else:
+                self.plan_current(c)
+            self.log('Objectif de %s : %s' % (c, self.objective_text(self.objectives[c])))
+        # les IA ont prevu leur placement : il n'est revele qu'a l'etape 5, dans l'ordre du tour
+        staged = {pid: s['loc'] for pid, s in self.p.items() if pid != 'louis_xvi' and s['holder'] != self.human}
+        for pid in staged:
+            self.p[pid]['loc'] = None
+        self.step(5)
+        for c in self.order:
+            if c == self.human:
+                self.plan_current(c)
+            else:
+                for pid in self.perso_of(c):
+                    if pid in staged:
+                        self.p[pid]['loc'] = staged[pid]
+            placed = ['%s à %s' % (PERSO[pid]['label'], rn(self.p[pid]['loc'])) for pid in self.perso_of(c)
+                      if self.p[pid]['loc'] and pid != 'louis_xvi']
+            self.log('Placement de %s : %s' % (c, ', '.join(placed) if placed else 'aucune personnalité disponible'))
+
+    def objective_text(self, o):
+        t = o['target']
+        name = PERSO[t]['label'] if t in PERSO else LAW_FR.get(t) or REGIME_FR.get(t) or rn(t)
+        return '%s (%s)' % ({'plot': 'complot', 'revolt': 'révolte', 'suppress': 'calmer la révolte', 'persuade': 'persuader',
+                             'commune_raise': 'soulever la Commune', 'commune_suppress': 'réprimer la Commune',
+                             'law': 'faire adopter', 'regime': 'régime', 'arrest': 'arrêter', 'army': 'victoire militaire',
+                             'crush_commune': 'écraser la Commune'}.get(o['kind'], o['kind']), name)
 
     # ================================================================ personality actions
     def personality_actions(self):
@@ -1524,6 +1572,9 @@ class Game:
     # ================================================================ patriot phase
     def patriot_phase(self):
         self.justice()
+        self.patriot_debates()
+
+    def patriot_debates(self):
         self.criticism()
         for (a, b, n) in self.switched:
             self.deputies[b] -= n
@@ -1640,6 +1691,8 @@ class Game:
                     dis += n
                 elif rg > ro + 0.05:
                     conf += n
+        if dis <= conf:
+            self.log('Vote de confiance : %d pour %s, %d pour %s → le Gouvernement reste à %s' % (conf, gov, dis, opp, gov))
         if dis > conf:
             self.log('VOTE DE DÉFIANCE (%d contre %d) : %s remplace %s au Gouvernement' % (dis, conf, opp, gov))
             if gov == G:
@@ -2195,10 +2248,13 @@ class Game:
 
     # ================================================================ military phase
     def military_phase(self):
+        self.step(11)
         self.reinforcements()
         self.maintenance()
+        self.step(12)
         self.try_coups()
         self.movement()
+        self.step(13)
         self.combat()
         self.military_control()
 
@@ -2391,7 +2447,7 @@ class Game:
                     free.remove(a)
                 self.tracks['commune'] = 20
                 self.log('Le Gouvernement envoie l\'armée contre la Commune')
-        interest = set(self.armies[a]['region'] for a in self.enemy_armies()) | set(self.coal) | set(self.revolt) | {'Paris'}
+        interest = set(self.armies[a]['region'] for a in self.enemy_armies()) | set(self.coal) | set(self.revolt)
         kinds = {'regular': 'régulière', 'volunteer': 'de volontaires', 'temp': 'temporaire'}
         for a in list(free):
             src = self.armies[a]['region']
@@ -2406,6 +2462,8 @@ class Game:
                 if r in self.revolt:
                     bits.append('révolte')
                 return ' (%s)' % ', '.join(bits) if bits else ''
+            if len(dests) == 1:
+                continue
             opts = [dict(label=('Rester à %s' % rn(r) if r == src else 'Aller à %s' % rn(r)) + tag(r), region=r) for r in dests]
             i = self.ask('move', 'Mouvement : armée %s à %s.' % (kinds.get(self.armies[a]['kind'], ''), rn(src)), opts)
             if dests[i] != src:
@@ -2594,11 +2652,14 @@ class Game:
 
     # ================================================================ interphase
     def interphase(self):
+        self.step(14)
+        self.log('%d assignats dépensés ce tour' % self.spent)
         inc = self.spent // 1000
         if inc:
             self.track('economy', inc, 'spending %d' % self.spent)
         self.stats['spent_total'] += self.spent
         self.spent = 0
+        self.step(15)
         # revenus
         for c in CURRENTS:
             income = sum(REGIONS[r][0] for r in REGIONS if self.control[r] == c and not (c == R and r in self.coal))
@@ -2613,9 +2674,12 @@ class Game:
             n_p = len([pid for pid in self.perso_of(c, ('free', 'fled')) if pid != 'louis_xvi' or self.king in ('free', 'kidnapped')])
             income = max(income, 100 + 50 * n_p)
             self.money[c] += income
+            self.log('Revenus : %s reçoit %d assignats' % (c, income))
         lost = sum(REGIONS[r][0] for r in REGIONS if r in self.revolt or r in self.coal or (
             self.control[r] == R and self.armies_in(r, ['catholic']) and not self.armies_in(r, REVOLUTIONARY)))
         self.gov_money = max(500, 2500 - lost)
+        self.log('Revenus : le Gouvernement repart avec %d assignats' % self.gov_money)
+        self.step(16)
         # objectifs
         for who, o in self.objectives.items():
             if who == GOV:
@@ -2928,7 +2992,6 @@ class Game:
         allc = cands + pcands + rcands
         allc.sort(key=lambda x: -x['ev'] / max(1, x['cost']) * 100 - x['ev'])
         if human:
-            self.human_objective(c, allc)
             allc = self.human_plan(c, allc)
         used = set()
         regions_done = set()
@@ -3241,7 +3304,7 @@ class Game:
             opts.append(dict(label='Vaincre les armées ennemies à %s' % rn(r), kind='army', target=r))
         if self.gov_law_regime():
             for law in LAWS:
-                if law != 'trial' and self.law_allowed(GOV, law):
+                if law != 'trial' and self.law_allowed(GOV, law) and self.law_pass_prob(GOV, law) >= 0.2:
                     opts.append(dict(label='Faire adopter : %s' % LAW_FR[law], kind='law', target=law))
         if not opts:
             opts.append(dict(label='Faire adopter une loi civique', kind='law', target='civic'))
@@ -3250,29 +3313,39 @@ class Game:
         o = opts[i]
         self.objectives[GOV] = dict(kind=o['kind'], target=o['target'], done=False, holder=self.gov_holder)
 
-    def human_objective(self, c, cands):
-        opts, seen = [], set()
-        for a in cands:
-            kind = a['kind'] if a['kind'] != 'remove' else None
-            if not kind:
-                continue
-            tgt = a.get('target') or a.get('region')
-            if (kind, tgt) in seen:
-                continue
-            seen.add((kind, tgt))
-            name = PERSO[tgt]['label'] if kind == 'persuade' else rn(tgt)
-            opts.append(dict(label='%s : %s' % ({'plot': 'Réussir un complot', 'revolt': 'Réussir une révolte',
-                                                 'suppress': 'Calmer la révolte', 'persuade': 'Persuader',
-                                                 'commune_raise': 'Soulever la Commune',
-                                                 'commune_suppress': 'Réprimer la Commune'}[kind], name),
-                             kind=kind, target=tgt, region=a.get('region')))
+    def human_objective(self, c):
+        """Etape 4 : objectif du joueur, limite aux actions ou il a une personnalite influente."""
+        opts = []
+        official = self.official(c)
+        mine = [pid for pid in self.perso_of(c) if pid != 'louis_xvi']
+        infl = sorted({r for pid in mine for r in PERSO[pid]['influence']})
+        for r in infl:
+            ctl = self.effective_control(r)
+            if r in self.revolt:
+                if ctl != c:
+                    opts.append(dict(label='Calmer la révolte à %s' % rn(r), kind='suppress', target=r, region=r))
+            elif ctl != c and r not in self.coal and not (r == 'Paris' and self.commune_raised):
+                if not official and r != 'Paris':
+                    opts.append(dict(label='Révolte à %s' % rn(r), kind='revolt', target=r, region=r))
+                opts.append(dict(label='Complot à %s%s' % (rn(r), ' (contrôlée par %s)' % ctl if ctl else ' (neutre)'),
+                                 kind='plot', target=r, region=r))
+        if 'Paris' in infl and self.can_commune(c) and not self.paris_occupied():
+            if not self.commune_raised:
+                opts.append(dict(label='Soulever la Commune', kind='commune_raise', target='Paris', region='Paris'))
+            elif self.commune_ctrl != c:
+                opts.append(dict(label='Réprimer la Commune', kind='commune_suppress', target='Paris', region='Paris'))
+        for pid, s in self.p.items():
+            if s['holder'] != c and s['status'] == 'free' and c in ({PERSO[pid]['main']} | PERSO[pid]['secondary']) \
+                    and (pid != 'louis_xvi' or self.regime == 'Legislative'):
+                opts.append(dict(label='Persuader %s (%s)' % (PERSO[pid]['label'], s['holder']), kind='persuade', target=pid))
         if self.official(c) and (LAW_PROPOSERS[self.regime] in ('currents', 'both') or self.regime == 'Legislative'):
             for law in LAWS:
-                if law != 'trial' and self.law_allowed(c, law):
+                if law != 'trial' and self.law_allowed(c, law) and self.law_pass_prob(c, law) >= 0.2:
                     opts.append(dict(label='Faire adopter : %s' % LAW_FR[law], kind='law', target=law))
-        opts.sort(key=lambda o: (o['kind'] == 'law', o['kind'] == 'persuade', o['label']))
-        i = self.ask('objective', 'Ton objectif du tour (réussi : Renommée +1 ; manqué : -1). '
-                     'Tu choisis ensuite tes actions.', opts)
+        if not opts:
+            opts.append(dict(label='Complot à Paris', kind='plot', target='Paris', region='Paris'))
+        i = self.ask('objective', 'Ton objectif du tour (réussi : Renommée +1 ; manqué : -1). Seules les régions où '
+                     'une de tes personnalités a de l\'influence sont proposées.', opts)
         o = opts[i]
         self.objectives[c] = dict(kind=o['kind'], target=o['target'], done=False)
 

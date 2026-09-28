@@ -34,12 +34,14 @@ def snapshot(g):
 
 def step(seed, human, answers, rules='FR'):
     g = Game(seed=seed, human=human, answers=answers, rules=rules)
+    snaps = []   # etat du jeu a la fin de chaque etape : (nombre de lignes du journal, etat)
+    g.on_step = lambda: snaps.append(dict(upto=len(g.lines), state=snapshot(g)))
     question = None
     try:
         g.play()
     except NeedInput as e:
         question = e.question
-    out = dict(question=question, log=g.lines, state=snapshot(g), over=question is None)
+    out = dict(question=question, log=g.lines, state=snapshot(g), over=question is None, snaps=snaps[-40:])
     if question is None:
         out['winner'] = g.winner
         m = getattr(g, 'majority', None)

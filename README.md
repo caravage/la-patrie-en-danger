@@ -334,7 +334,7 @@ aussi d'annuler un choix.
 - Statistiques sur N parties entre IA : `python3 tools/simulation/run.py HS 500`
 - Page web : `web/index.html` + `web/carte.jpg` ; elle charge le moteur Python
   dans le navigateur avec Pyodide. Pour l'héberger, publier à côté de la page
-  `py/` (les 4 fichiers `lpd_*.py` et `tools/components.py`) et `pyodide/`
+  `py/` (les fichiers `lpd_*.py` sauf `run.py`/`analyze.py`, et `tools/components.py`) et `pyodide/`
   (`pyodide.js`, `pyodide.asm.mjs`, `pyodide.asm.wasm`, `pyodide-lock.json`
   du paquet npm `pyodide`, et `python_stdlib.zip` encodé en base64 sous le nom
   `python_stdlib.b64.txt`).
