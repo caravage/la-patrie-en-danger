@@ -23,7 +23,7 @@ label = ParagraphStyle('l', fontName='Helvetica', fontSize=8.3, leading=10.3, te
 body = ParagraphStyle('b', fontName='Helvetica', fontSize=7.8, leading=9.8)
 
 W = landscape(A4)[0] - 24 * mm
-COLS = [W * 0.03, W * 0.13, W * 0.07, W * 0.28, W * 0.21, W * 0.28]
+COLS = [W * 0.03, W * 0.12, W * 0.07, W * 0.27, W * 0.20, W * 0.21, W * 0.10]
 
 # scenario concerned by each row (Historical, Open or both)
 SCEN = {'1': 'Both', '2': 'Both', '3': 'Both', '4': 'Historical', '5': 'Open', '6': 'Open', '7': 'Open',
@@ -235,6 +235,19 @@ for n in range(19, 33):
     SCEN[str(n)] = 'Open'
 SCEN['23'] = SCEN['29'] = SCEN['32'] = 'Both'
 
+# text we follow: French where it is explicit, English (or the designers) where the French text is
+# ambiguous or self-contradictory, English additions where the French text is silent
+F, E = '<b>French</b>', '<b>English</b>'
+VERDICT = {
+    '1': F, '2': F, '3': F + '<br/>(to confirm, see XI-B1)', '4': F, '5': F, '6': F, '7': F, '8': F,
+    '9': E + '<br/>(designers)', '10': '<b>Designers</b>: once only, no war condition', '11': F, '12': E + '<br/>(French ambiguous)',
+    '13': F, '14': F, '15': F, '16': F, '17': E + '<br/>(regime description)', '18': E + '<br/>(French contradictory)',
+    '19': E + '<br/>(French ambiguous)', '20': F, '21': F, '22': F, '23': E + '<br/>(French silent)', '24': F, '25': F,
+    '26': F + ' for the +2 bonus; ' + E + ' for the rest (French silent)', '27': F, '28': F,
+    '29': E + ' for Legislative; ' + F + ' for the Mountain deputies', '30': E + '<br/>(regime description)',
+    '31': F, '32': E + '<br/>(French silent)',
+}
+
 CHART_ROWS = [
     ('Freedom of Religion', 'Commune <b>-2</b> in the French rulebook (XII-9 p.31) and in the English '
      'rules (13.3.3); the English “The Laws” chart says -1.'),
@@ -279,13 +292,16 @@ story = [
               'Version 1.0” edited by MWBigney, Historical and Open scenarios. French references are section '
               'and page of the 1995 rulebook; original French wording is quoted in italics. Everything else '
               'matches, including all eleven regime descriptions: set-up, Result Table, action costs and '
-              'effects, regime change conditions, election formulas, victory points and final rankings.', sub),
+              'effects, regime change conditions, election formulas, victory points and final rankings. '
+              '<b>Verdict</b>: the text we play by. The French rulebook prevails where it is explicit; the '
+              'English rules (or the designers\' answers) where the French text is ambiguous or contradicts '
+              'itself; the English additions where the French text is silent.', sub),
 ]
 data = [[Paragraph(h, head) for h in ('#', 'Topic', 'Scenario', 'French rulebook (1995)', 'English rules',
-                                      'Question')]]
+                                      'Question', 'Verdict')]]
 for n, topic, f, e, q in ROWS:
     data.append([Paragraph(n, body), Paragraph(topic, label), Paragraph(SCEN[n], body), Paragraph(f, body),
-                 Paragraph(e, body), Paragraph(q, body)])
+                 Paragraph(e, body), Paragraph(q, body), Paragraph(VERDICT[n], body)])
 story.append(table(data, COLS))
 story.append(Paragraph('English player aids checked against the French rulebook', phase))
 data = [[Paragraph('Law', head), Paragraph('Finding', head)]]
