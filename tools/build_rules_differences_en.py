@@ -23,7 +23,12 @@ label = ParagraphStyle('l', fontName='Helvetica', fontSize=8.3, leading=10.3, te
 body = ParagraphStyle('b', fontName='Helvetica', fontSize=7.8, leading=9.8)
 
 W = landscape(A4)[0] - 24 * mm
-COLS = [W * 0.03, W * 0.14, W * 0.31, W * 0.22, W * 0.30]
+COLS = [W * 0.03, W * 0.13, W * 0.07, W * 0.28, W * 0.21, W * 0.28]
+
+# scenario concerned by each row (Historical, Open or both)
+SCEN = {'1': 'Both', '2': 'Both', '3': 'Both', '4': 'Historical', '5': 'Open', '6': 'Open', '7': 'Open',
+        '8': 'Both', '9': 'Both', '10': 'Both', '11': 'Both', '12': 'Both', '13': 'Both', '14': 'Both',
+        '15': 'Both', '16': 'Both', '17': 'Open', '18': 'Both'}
 
 
 def fr(ref, text, quote=None):
@@ -67,10 +72,10 @@ ROWS = [
      en('12.0 vs 12.2, R.1.7.1', '12.0 says Open Scenario only, but 12.2 allows the limited coup '
         '“during the Legislative (HS)”.'),
      'Can the Feuillant / Gironde limited coup be used in the Historical scenario?'),
-    ('5', 'Number of plotters (popular and limited coups)',
-     fr('XI-C p.28', 'One Personality, <b>possibly seconded by one other</b> (+2).',
-        'secondée éventuellement par une 2e Personnalité'),
-     en('12.1, 12.2', '+2 fame for <b>each</b> additional Personality, no limit.'),
+    ('5', 'Number of plotters (popular, limited and military coups)',
+     fr('XI-C p.28, XI-C3 p.28', 'One Personality, <b>possibly seconded by one other</b> (+2); same for '
+        'the rally of a military coup.', 'secondée éventuellement par une 2e Personnalité'),
+     en('12.1, 12.2, 12.3.1', '+2 fame for <b>each</b> additional Personality, no limit.'),
      'Is the number of plotters limited to two?'),
     ('6', 'Successful constitutional referendum',
      fr('XI-D p.29-30', 'The proposing Current <b>and</b> the Government each gain <b>+1 fame</b>. '
@@ -141,6 +146,94 @@ ROWS = [
      en('11.3.1, 11.4', 'Trial the following turn.'),
      'Confirm the following turn (internal contradiction in the French text).'),
 ]
+ROWS += [
+    ('19', 'Military coup: failed rally',
+     fr('XI-C3 p.28', 'The plotting Personalities “immediately become outlaws” when the rally is attempted; '
+        'if the rally fails, only the Current and the Personalities that did not take part escape outlaw status.',
+        'Ces Personnalités deviennent immédiatement hors-la-loi. [...] Si le ralliement échoue, la Tendance et '
+        'les Personnalités n\'ayant pas participé au coup d\'Etat ne sont pas considérées hors-la-loi'),
+     en('12.3.1', '“If the rally attempt fails, nothing happens”; the Personalities are outlawed only if '
+        'the rally succeeds.'),
+     'Are the plotters outlawed even when the rally fails?'),
+    ('20', 'Military coup: time of the combat in Paris',
+     fr('XI-C3 p.29', 'The combat takes place at the <b>end of the Movement segment</b>.',
+        'Le combat a exceptionnellement lieu à la fin de la s/phase de Mouvement'),
+     en('12.3.3', 'Resolved at the end of the <b>intercepting armies\'</b> movement.'),
+     'Is the combat fought before or after the other armies move?'),
+    ('21', 'Failed popular or military coup: the Commune',
+     fr('XI-C4 p.29', 'The plotting Current <b>loses control of the Commune</b>, which becomes neutral.',
+        'La Tendance perd éventuellement le contrôle de la Commune (qui redevient neutre)'),
+     en('12.1.1, 12.3.3.1', 'Not in the general rule; only some regime descriptions say so '
+        '(R.3.7.2.2, R.4.7.2.1, R.6.7.2.1...).'),
+     'Does the loss of the Commune apply to every failed popular or military coup?'),
+    ('22', 'Legislative: Gironde popular coup',
+     fr('XV-A5 p.38', 'The Gironde may attempt a limited <b>or popular</b> coup only if the Feuillant has '
+        'previously succeeded a limited coup against it, or if the Commune is at level III.',
+        'le Girondin peut tenter un coup d\'Etat limité/populaire contre le Feuillant si ce dernier a '
+        'précédemment réussi un coup d\'Etat limité contre lui ou si la Commune est en seuil III'),
+     en('R.1.7.1.2, R.1.7.2.1', 'The condition applies to the limited coup only; the popular coup has no '
+        'precondition.'),
+     'Does the condition also restrict the Gironde\'s popular coup?'),
+    ('23', 'Legislative to Convention / Terror: “12+ regions”',
+     fr('XV-A6 p.38', '12 or more regions controlled by the Royalist and the Coalition; no double count.',
+        'si 12+ régions sont contrôlées par le Royaliste et les Coalisés'),
+     en('R.1.8.1, R.1.8.2', 'A region controlled by both the Royalist and the Coalition <b>counts twice</b>.'),
+     'Where does the double count come from?'),
+    ('24', 'Coups to Prairial: who controls the Commune',
+     fr('XV-D4 p.43, XV-G5 p.48', 'Thermidor: Commune at level III “(Mtg or Scu)”; Directorate: level II '
+        '(Scu) or III (Scu, Mtg). Either Current may plot with the other\'s Commune, which must agree (XI-C1).',
+        'la Commune doit être soulevée et en seuil III (Mtg ou Scu)'),
+     en('R.4.7.2.1-2, R.7.7.2.1-2', 'The Commune must be controlled by the plotting Current.'),
+     'May the Mountain plot with a Sans-Culotte Commune (and vice versa)?'),
+    ('25', 'Directorate: number of coups to Prairial',
+     fr('XV-G5 NB p.48', '<b>Only one</b> attempt: if the Mountain tries, neither it nor the Sans-Culotte '
+        'may try again.', 'il ne peut y avoir qu\'une seule tentative de coup d\'Etat'),
+     en('R.7.7.2', 'Only the Royalist is limited to one attempt.'),
+     'Was the single attempt for the Mountain / Sans-Culotte dropped on purpose?'),
+    ('26', 'Directorate: running the two-headed Government',
+     fr('XV-G3 p.47-48', 'Silent on the first partner and on how a new partner is chosen after a vote of '
+        'no confidence; on a disagreement, only “the Current not in power (Gironde or Feuillant)” may give +2; '
+        'no special timing for limited coups.',
+        'La Tendance qui n\'est pas au pouvoir (entre le Girondin et le Feuillant) peut accorder un bonus de +2'),
+     en('R.7.2, R.7.2.2, R.7.5, R.7.7.1', 'First partner: most deputies (Marais breaks ties); the Mountain may '
+        'also give +2; re-roll ties; new partner chosen by a second Assembly vote without the old partner; '
+        'limited coups just before the Political Actions.'),
+     'Are these additions designer clarifications?'),
+    ('27', 'Mercy to Directorate: time of the referendum',
+     fr('XI-D p.29, XV-F p.45', 'Referendums are held at the Government\'s request at the <b>start of the '
+        'Political phase</b>; the new regime applies immediately.',
+        'Ceci se joue, à la demande du Gouvernement, au début de la phase d\'Action politique'),
+     en('R.6.8.2', 'Held at the <b>end of the turn</b>; the Directorate is installed at the next Political phase.'),
+     'Start of the Political phase, or end of the turn?'),
+    ('28', 'First Republic, One & Indivisible: Sans-Culotte variant',
+     fr('XV-K3 p.52', '<b>Marat switches to the Sans-Culotte</b> and can no longer be switched back by the Mountain.',
+        'Marat passe au Sans-culotte et ne peut plus être "retourné" par le Montagnard'),
+     en('R.10.9.4', 'Not mentioned.'),
+     'Should Marat\'s switch be added?'),
+    ('29', 'Elections when the Terror is installed',
+     fr('XV-C1 p.40', 'Same Assembly after the Convention, new elections after the Federal Republic; '
+        'Mountain deputies set aside after a failed coup are reinstated. Nothing for Legislative to Terror.'),
+     en('R.3.6', 'New elections also after the Legislative; no reinstatement of Mountain deputies.'),
+     'Confirm the Legislative case and the reinstatement of Mountain deputies.'),
+    ('30', 'Outlaws under Prairial',
+     fr('VII-C1 p.13 vs XV-H p.48', 'Chapter VII groups Prairial with the Terror (Royalist, Gironde, Feuillant); '
+        'the regime description also outlaws the <b>Marais</b>.'),
+     en('R.8.4.1', 'Follows the regime description (Marais outlawed).'),
+     'Confirm the Marais is outlawed (internal contradiction in the French text).'),
+    ('31', 'Directorate: revolutionary majority at the end',
+     fr('XIII-C4 NB p.35', 'The Mountain wins instead of the Gironde only if it is <b>not outlawed</b> and '
+        'has more VP.', 'si le Montagnard n\'est pas hors-la-loi, il peut gagner'),
+     en('14.3.5', 'Gironde or Mountain by VP, Gironde wins ties; no outlaw condition.'),
+     'Should an outlawed Mountain be unable to win?'),
+    ('32', 'Ties for the winner',
+     fr('XIII-C p.35', 'No tie rule.'),
+     en('14.3.1 to 14.3.5', 'Feuillant beats Marais; Mountain beats Gironde (Convention) and Sans-Culotte '
+        '(Terror); Gironde beats Mountain (Directorate).'),
+     'Do these tie-breakers come from the designers?'),
+]
+for n in range(19, 33):
+    SCEN[str(n)] = 'Open'
+SCEN['23'] = SCEN['29'] = SCEN['32'] = 'Both'
 
 CHART_ROWS = [
     ('Freedom of Religion', 'Commune <b>-2</b> in the French rulebook (XII-9 p.31) and in the English '
@@ -148,6 +241,21 @@ CHART_ROWS = [
     ('Declaration of War, Conscription', 'Not in the French rulebook (XII-11, XII-12 p.32), but <b>the '
      'designers</b> (Marcé; errata VII-E2) state that War, Fatherland in Danger and Conscription can be '
      'passed only once: the English “The Laws” chart is right.'),
+]
+
+
+XREFS = [
+    ('1.1', 'Victory “is determined in a three-step process outlined in 15.0”.', '14.0'),
+    ('11.4', 'Second trial: “Thermidor (HS) or Mercy (HS)”.', 'Mercy (OS)'),
+    ('14.3.5', '“consult 15.4 as though the Terror had been in place”.', '14.4'),
+    ('15.2.2', 'Marais “controlled by the game system, exactly as 15.3.1”.', '15.2.1'),
+    ('R.2.1', 'Convention brought about by a Gironde coup “(see R.1.7.1 and R.1.7.3)”.', 'R.1.7.2 and R.1.7.3'),
+    ('R.4.8.2', 'Thermidor to Prairial “By Montagne (R.5.7.2.1) or Sans-Culotte (R.5.7.2.2)”.',
+     'R.4.7.2.1 and R.4.7.2.2'),
+    ('R.7.7.3.1', '“applied immediately (see XI-C4)”: French rulebook numbering.', '12.3.3.2'),
+    ('R.10.1.1', '“All outlaw personalities (R.9.4.1)”.', 'R.10.4.1'),
+    ('R.10.1.2', '“Montagne Variant (see 10.9.3) or the Sans-Culotte Variant (see 10.9.4)”.', 'R.10.9.3, R.10.9.4'),
+    ('R.10.7.2', 'Number used twice (Switching Variants, then Popular Coups).', 'R.10.7.2 and R.10.7.3 (then R.10.7.4)'),
 ]
 
 
@@ -168,21 +276,29 @@ def table(data, cols):
 story = [
     Paragraph('French 1995 Rulebook vs. English Rules', title),
     Paragraph('Comparison of the official Azure Wish rulebook (French, 1995) with the English “Decimal '
-              'Version 1.0” edited by MWBigney. French references are section and page of the 1995 '
-              'rulebook; original French wording is quoted in italics. Everything else matches: set-up, '
-              'Result Table, action costs and effects, regime change conditions, election formulas, '
-              'victory points and final rankings.', sub),
+              'Version 1.0” edited by MWBigney, Historical and Open scenarios. French references are section '
+              'and page of the 1995 rulebook; original French wording is quoted in italics. Everything else '
+              'matches, including all eleven regime descriptions: set-up, Result Table, action costs and '
+              'effects, regime change conditions, election formulas, victory points and final rankings.', sub),
 ]
-data = [[Paragraph(h, head) for h in ('#', 'Topic', 'French rulebook (1995)', 'English rules', 'Question')]]
+data = [[Paragraph(h, head) for h in ('#', 'Topic', 'Scenario', 'French rulebook (1995)', 'English rules',
+                                      'Question')]]
 for n, topic, f, e, q in ROWS:
-    data.append([Paragraph(n, body), Paragraph(topic, label), Paragraph(f, body), Paragraph(e, body),
-                 Paragraph(q, body)])
+    data.append([Paragraph(n, body), Paragraph(topic, label), Paragraph(SCEN[n], body), Paragraph(f, body),
+                 Paragraph(e, body), Paragraph(q, body)])
 story.append(table(data, COLS))
 story.append(Paragraph('English player aids checked against the French rulebook', phase))
 data = [[Paragraph('Law', head), Paragraph('Finding', head)]]
 for s, txt in CHART_ROWS:
     data.append([Paragraph(s, label), Paragraph(txt, body)])
 story.append(table(data, [W * 0.22, W * 0.78]))
+story.append(Paragraph('Cross-reference errors in the English rules', phase))
+data = [[Paragraph('Section', head), Paragraph('Text', head), Paragraph('Should read', head)]]
+for sec, txt, fix in XREFS:
+    data.append([Paragraph(sec, label), Paragraph(txt, body), Paragraph(fix, body)])
+story.append(table(data, [W * 0.12, W * 0.55, W * 0.33]))
+story.append(Paragraph('<br/>Also in the English rules only: optional rule 15.3 “Ever-So-Slightly More Fair '
+                       'Euro-ish Variant” (proposed by HSGC/NYNA players), not part of the 1995 rulebook.', sub))
 
 doc = SimpleDocTemplate(OUT, pagesize=landscape(A4), leftMargin=12 * mm, rightMargin=12 * mm,
                         topMargin=10 * mm, bottomMargin=10 * mm,
