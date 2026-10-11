@@ -106,7 +106,7 @@ def marker(keys, values):
 
 
 def layer(images, level_names, up_command, up_key, layer_name='Etat',
-          description='', start_level=1, follow_property=''):
+          description='', start_level=1, follow_property='', reset_command='', reset_key=''):
     """Embellishment (« Couche ») version 2 : 33 champs, dans l'ordre exact
     de Embellishment.myGetType().
 
@@ -126,8 +126,8 @@ def layer(images, level_names, up_command, up_key, layer_name='Etat',
         '',            # 7  downCommand
         CTRL,          # 8  downModifiers
         '',            # 9  downKey
-        '',            # 10 resetCommand
-        '',            # 11 resetKey
+        reset_command,  # 10 resetCommand
+        reset_key,      # 11 resetKey (ramene la couche au niveau resetLevel)
         '1',           # 12 resetLevel
         False,         # 13 drawUnderneathWhenSelected
         0,             # 14 xOff

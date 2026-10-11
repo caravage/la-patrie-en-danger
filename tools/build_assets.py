@@ -206,6 +206,32 @@ def render_note_card():
     return [('note_blank.png', im.size), ('note_hidden_border.png', border.size)]
 
 
+def render_turn_markers():
+    """Marqueurs de tour superposes aux pions (92 x 92), effaces par le bouton
+    « New turn » : voile « USED » pour une personnalite qui a deja agi (une
+    action par tour, regle 7.1) et cadre « SWITCHED » pour un depute retourne
+    ce tour (un seul retournement par tour, 7.5.2.1 ; retour a l'etape 10)."""
+    from PIL import ImageFont
+    W = H = 92
+    font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 15)
+
+    def banner(im, text, fill):
+        d = ImageDraw.Draw(im)
+        d.rectangle([0, H // 2 - 11, W - 1, H // 2 + 11], fill=fill)
+        tw = d.textlength(text, font=font)
+        d.text(((W - tw) / 2, H // 2 - 10), text, font=font, fill=(255, 255, 255, 255))
+
+    used = Image.new('RGBA', (W, H), (40, 40, 40, 120))
+    banner(used, 'USED', (60, 60, 60, 230))
+    used.save(os.path.join(IMG, 'marker_used.png'), optimize=True)
+
+    switched = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(switched).rectangle([1, 1, W - 2, H - 2], outline=(25, 60, 170, 255), width=5)
+    banner(switched, 'SWITCHED', (25, 60, 170, 235))
+    switched.save(os.path.join(IMG, 'marker_switched.png'), optimize=True)
+    return [('marker_used.png', (W, H)), ('marker_switched.png', (W, H))]
+
+
 def render_charts():
     """Convertit les tableaux courts en images pour la fenetre « Aides de jeu »."""
     import pymupdf
@@ -310,6 +336,7 @@ def main(ttsmod, countersheet=None):
             written.extend(extract_deputy_counters(countersheet))
         written.extend(render_charts())
         written.extend(render_note_card())
+        written.extend(render_turn_markers())
 
         setup = {'board': extract_setup(ttsmod, index),
                  'zones': player_zone_setup(C.BOARD_PX[1], C.BOARD_PX[0])}

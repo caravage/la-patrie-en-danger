@@ -29,6 +29,9 @@ mise en place ; les joueurs appliquent les règles eux‑mêmes.
 * **Notes secrètes**, une par camp, posées dans sa zone joueur : chacun peut
   y écrire une promesse, illisible des autres tant qu'elle reste masquée,
   et qu'il peut relire lui-même à tout moment par un « Peek » (Ctrl+P).
+* **Marqueurs de tour** : « USED » sur une personnalité qui a agi et
+  « SWITCHED » sur un député retourné (clic droit ou Ctrl+U), tous effacés par
+  le bouton « New turn ».
 * Boutons de dés 1d6 et 2d6, sélecteur de camp, inventaire.
 
 ## Mise en place
@@ -305,6 +308,24 @@ Corrections et ajouts demandés après relecture du premier module :
   Treasury de la palette.
 - Les personnalités en fuite (§7.3.1 résultat B, §7.3.2 résultat B) se posent
   sur la piste Chronologie, dans la case du tour où elles reviennent.
+
+## Version 1.1 : marqueurs USED et SWITCHED
+
+- **Personnalités** : « Used this turn (on/off) » (clic droit ou Ctrl+U) pose
+  un voile gris « USED » : une personnalité ne fait qu'une action par tour
+  (7.1), retournement de députés compris (7.5.2.1). Retourner le pion n'était
+  pas possible : le verso d'une personnalité à plusieurs courants montre
+  l'autre courant.
+- **Députés** : « Switched this turn (on/off) » (Ctrl+U) pose un cadre bleu
+  « SWITCHED » : un député ne change de camp qu'une fois par tour (note de
+  7.5.2.1) et tous les retournés reviennent à leur courant à l'étape 10 (8.3).
+- **Bouton « New turn »** dans la barre d'outils : il envoie Ctrl+Maj+U à
+  toutes les personnalités et à tous les députés et efface les deux
+  marqueurs. À utiliser en début de tour, après le retour des députés.
+- Vérifié dans VASSAL 3.7.27 : les 62 personnalités et 33 députés des
+  palettes et du plateau passent du niveau 1 au niveau 2 avec Ctrl+U, puis
+  reviennent au niveau 1 avec la touche du bouton, dont le filtre retient
+  exactement ces 95 pièces.
 
 ## Note technique
 

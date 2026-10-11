@@ -54,6 +54,8 @@ ARREST_KEY = V.keystroke(65)    # Ctrl+A : Arrest
 GUILLOTINE_KEY = V.keystroke(71)  # Ctrl+G : Guillotine
 HIDE_KEY = V.keystroke(72)      # Ctrl+H : Hide/Reveal a secret note
 EDIT_NOTE_KEY = V.keystroke(69)  # Ctrl+E : Edit Text on a secret note
+USED_KEY = V.keystroke(85)      # Ctrl+U : marquer / demarquer USED ou SWITCHED
+NEW_TURN_KEY = V.keystroke(85, 195)  # Ctrl+Shift+U : envoye par le bouton « New turn »
 PEEK_KEY = 'P'                  # Ctrl+P : Peek at a hidden secret note (owner only)
 
 TREASURY_COMMANDS = [
@@ -66,6 +68,16 @@ TREASURY_COMMANDS = [
     ('Set Amount', V.keystroke(77), ('R', 'Amount (livres)')),
 ]
 TREASURY_KEYS = [k for _l, k, _c in TREASURY_COMMANDS]
+
+
+def turn_marker(image, name, command, description):
+    """Couche a deux niveaux (rien / marqueur) basculee par Ctrl+U et remise
+    a zero par le bouton « New turn » (Ctrl+Shift+U envoye a toutes les
+    pieces). Placee a l'exterieur des autres couches pour etre dessinee
+    par-dessus le pion."""
+    return V.layer(['', image], ['', '+ (%s)' % name], command, USED_KEY,
+                   layer_name=name.capitalize(), description=description,
+                   reset_command='', reset_key=NEW_TURN_KEY)
 
 
 class Builder:
@@ -109,16 +121,18 @@ class Builder:
                            '$PieceName$ is sent to Madame Guillotine',
                            description='Report execution'),
         ]
+        used = turn_marker('marker_used.png', 'used', 'Used this turn (on/off)',
+                           'Has acted this turn (rule 7.1)')
         if len(currents) == 1:
             traits = reports + [
-                arrest, guillotine,
+                used, arrest, guillotine,
                 V.marker(['Category', 'Current'], ['Personality', current]),
                 V.basic_piece(images[0], label, gpid)]
             return gpid, V.build_piece(traits), self.size_of(images[0])
         traits = reports + [
             V.report_state([FLIP_KEY], '$PieceName$ changes current',
                            description='Report change of affiliation'),
-            arrest, guillotine,
+            used, arrest, guillotine,
             V.layer(images, ['+ (%s)' % c for c in currents],
                     'Change Current', FLIP_KEY,
                     layer_name='Current', description='Current affiliation'),
@@ -146,6 +160,8 @@ class Builder:
         label = 'Deputy %s (%d)' % (current, value)
         start = C.deputy_face_index(current, value)
         traits = [
+            turn_marker('marker_switched.png', 'switched', 'Switched this turn (on/off)',
+                        'Switched side this turn (rule 7.5.2.1)'),
             V.delete(),
             V.layer(images, names, '', '', layer_name='Face',
                     description='Deputy face (party and value)',
@@ -642,6 +658,18 @@ def build():
               '</VASSAL.build.module.PlayerRoster>'
               % ''.join('<entry>%s</entry>' % escape(c) for c in C.CURRENTS))
 
+    # Bouton « New turn » : envoie Ctrl+Shift+U aux personnalites et aux
+    # deputes, ce qui efface les marqueurs USED et SWITCHED (debut du tour,
+    # apres le retour des deputes retournes a l'etape 10).
+    new_turn = ('<VASSAL.build.module.GlobalKeyCommand name="New turn" buttonText="New turn" '
+                'tooltip="Clear all USED (personalities) and SWITCHED (deputies) markers" '
+                'icon="" buttonHotkey="" hotkey=%s '
+                'filter=%s reportSingle="true" '
+                'reportFormat="New turn: USED and SWITCHED markers cleared" '
+                'deckCount="-1" singleMap="false"/>'
+                % (quoteattr(NEW_TURN_KEY),
+                   quoteattr('{Category=="Personality" || Category=="Deputy"}')))
+
     dice = ''.join(
         '<VASSAL.build.module.DiceButton addToTotal="0" hotkey="" icon="" '
         'lockAdd="false" lockDice="false" lockPlus="false" lockSides="false" '
@@ -692,7 +720,7 @@ def build():
         '%s'
         '</VASSAL.build.GameModule>'
         % (quoteattr(MODULE_NAME), quoteattr(MODULE_VERSION), quoteattr(MODULE_DESC),
-           quoteattr(VASSAL_VERSION), b.gpid + 100, docs, roster, palette, dice,
+           quoteattr(VASSAL_VERSION), b.gpid + 100, docs, roster, palette, dice + new_turn,
            events, charts, the_map)
     )
     return xml, b
