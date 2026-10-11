@@ -322,6 +322,10 @@ Corrections et ajouts demandés après relecture du premier module :
   7.5.2.1) et tous les retournés reviennent à leur courant à l'étape 10 (8.3).
   Un député retourné garde sa couleur d'origine (on le déplace sans « Change
   Party »), le marqueur sert de rappel pour l'étape 10.
+- **Députés : « Clone » (Ctrl+K)**, juste sous « Switched this turn » dans le
+  menu : duplique le pion sur place, pour faire la monnaie (par exemple
+  retourner 3 députés d'un pion de 5, avec « Change Value ») sans passer par
+  la palette.
 - **Bouton « New turn »** dans la barre d'outils : il envoie Ctrl+Maj+U à
   toutes les personnalités et à tous les députés et efface les deux
   marqueurs. À utiliser en début de tour, après le retour des députés.

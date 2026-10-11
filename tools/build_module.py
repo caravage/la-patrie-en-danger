@@ -164,6 +164,10 @@ class Builder:
             # la moitie de la bande pour que son haut reste aligne sur le pion
             turn_marker('marker_switched.png', 'switched', 'Switched this turn (on/off)',
                         'Switched side this turn (rule 7.5.2.1)', y_offset=10),
+            # Clone juste sous « Switched » dans le menu (l'ordre du menu suit
+            # l'ordre des traits) : faire la monnaie d'un pion de deputes
+            # (ex. retourner 3 deputes d'un pion de 5) sans passer par la palette.
+            V.clone(),
             V.delete(),
             V.layer(images, names, '', '', layer_name='Face',
                     description='Deputy face (party and value)',
