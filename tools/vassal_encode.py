@@ -106,7 +106,7 @@ def marker(keys, values):
 
 
 def layer(images, level_names, up_command, up_key, layer_name='Etat',
-          description='', start_level=1, follow_property='', reset_command='', reset_key=''):
+          description='', start_level=1, follow_property='', reset_command='', reset_key='', y_offset=0):
     """Embellishment (« Couche ») version 2 : 33 champs, dans l'ordre exact
     de Embellishment.myGetType().
 
@@ -131,7 +131,7 @@ def layer(images, level_names, up_command, up_key, layer_name='Etat',
         '1',           # 12 resetLevel
         False,         # 13 drawUnderneathWhenSelected
         0,             # 14 xOff
-        0,             # 15 yOff
+        y_offset,      # 15 yOff (decalage vertical de l'image, en pixels)
         string_array(images),       # 16 imageName[]
         string_array(level_names),  # 17 commonName[]
         True,          # 18 loopLevels

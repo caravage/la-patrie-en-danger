@@ -70,14 +70,14 @@ TREASURY_COMMANDS = [
 TREASURY_KEYS = [k for _l, k, _c in TREASURY_COMMANDS]
 
 
-def turn_marker(image, name, command, description):
+def turn_marker(image, name, command, description, y_offset=0):
     """Couche a deux niveaux (rien / marqueur) basculee par Ctrl+U et remise
     a zero par le bouton « New turn » (Ctrl+Shift+U envoye a toutes les
     pieces). Placee a l'exterieur des autres couches pour etre dessinee
     par-dessus le pion."""
     return V.layer(['', image], ['', '+ (%s)' % name], command, USED_KEY,
                    layer_name=name.capitalize(), description=description,
-                   reset_command='', reset_key=NEW_TURN_KEY)
+                   reset_command='', reset_key=NEW_TURN_KEY, y_offset=y_offset)
 
 
 class Builder:
@@ -160,8 +160,10 @@ class Builder:
         label = 'Deputy %s (%d)' % (current, value)
         start = C.deputy_face_index(current, value)
         traits = [
+            # image plus haute que le pion (mot SWITCHED dessous) : decalee de
+            # la moitie de la bande pour que son haut reste aligne sur le pion
             turn_marker('marker_switched.png', 'switched', 'Switched this turn (on/off)',
-                        'Switched side this turn (rule 7.5.2.1)'),
+                        'Switched side this turn (rule 7.5.2.1)', y_offset=10),
             V.delete(),
             V.layer(images, names, '', '', layer_name='Face',
                     description='Deputy face (party and value)',

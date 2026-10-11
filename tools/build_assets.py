@@ -206,6 +206,9 @@ def render_note_card():
     return [('note_blank.png', im.size), ('note_hidden_border.png', border.size)]
 
 
+SWITCHED_BAND = 20  # hauteur de la bande « SWITCHED » sous le depute
+
+
 def render_turn_markers():
     """Marqueurs de tour superposes aux pions (92 x 92), effaces par le bouton
     « New turn » : voile « USED » pour une personnalite qui a deja agi (une
@@ -225,11 +228,21 @@ def render_turn_markers():
     banner(used, 'USED', (60, 60, 60, 230))
     used.save(os.path.join(IMG, 'marker_used.png'), optimize=True)
 
-    switched = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(switched).rectangle([1, 1, W - 2, H - 2], outline=(25, 60, 170, 255), width=5)
-    banner(switched, 'SWITCHED', (25, 60, 170, 235))
+    # Depute : liseré gris sur le jeton et mot « SWITCHED » écrit dessous, hors
+    # du jeton (les pions de l'Assemblée sont serrés : un bandeau sur le jeton
+    # masquerait sa valeur). Image plus haute que le pion (bande de 20 px en
+    # bas), décalée vers le bas dans build_module.py pour que son haut
+    # coïncide avec celui du pion.
+    small = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 13)
+    switched = Image.new('RGBA', (W, H + SWITCHED_BAND), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(switched)
+    sd.rectangle([1, 1, W - 2, H - 2], outline=(70, 70, 70, 255), width=4)
+    tw = sd.textlength('SWITCHED', font=small)
+    bx = (W - tw) / 2 - 4
+    sd.rectangle([bx, H + 2, bx + tw + 8, H + SWITCHED_BAND - 1], fill=(50, 50, 50, 235))
+    sd.text((bx + 4, H + 3), 'SWITCHED', font=small, fill=(255, 255, 255, 255))
     switched.save(os.path.join(IMG, 'marker_switched.png'), optimize=True)
-    return [('marker_used.png', (W, H)), ('marker_switched.png', (W, H))]
+    return [('marker_used.png', (W, H)), ('marker_switched.png', (W, H + SWITCHED_BAND))]
 
 
 def render_charts():

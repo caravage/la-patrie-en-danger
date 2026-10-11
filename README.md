@@ -30,7 +30,7 @@ mise en place ; les joueurs appliquent les règles eux‑mêmes.
   y écrire une promesse, illisible des autres tant qu'elle reste masquée,
   et qu'il peut relire lui-même à tout moment par un « Peek » (Ctrl+P).
 * **Marqueurs de tour** : « USED » sur une personnalité qui a agi et
-  « SWITCHED » sur un député retourné (clic droit ou Ctrl+U), tous effacés par
+  « SWITCHED » sous un député retourné (clic droit ou Ctrl+U), tous effacés par
   le bouton « New turn ».
 * Boutons de dés 1d6 et 2d6, sélecteur de camp, inventaire.
 
@@ -316,9 +316,12 @@ Corrections et ajouts demandés après relecture du premier module :
   (7.1), retournement de députés compris (7.5.2.1). Retourner le pion n'était
   pas possible : le verso d'une personnalité à plusieurs courants montre
   l'autre courant.
-- **Députés** : « Switched this turn (on/off) » (Ctrl+U) pose un cadre bleu
-  « SWITCHED » : un député ne change de camp qu'une fois par tour (note de
+- **Députés** : « Switched this turn (on/off) » (Ctrl+U) pose un liseré gris
+  sur le jeton et écrit « SWITCHED » juste en dessous, sans rien masquer de
+  la valeur : un député ne change de camp qu'une fois par tour (note de
   7.5.2.1) et tous les retournés reviennent à leur courant à l'étape 10 (8.3).
+  Un député retourné garde sa couleur d'origine (on le déplace sans « Change
+  Party »), le marqueur sert de rappel pour l'étape 10.
 - **Bouton « New turn »** dans la barre d'outils : il envoie Ctrl+Maj+U à
   toutes les personnalités et à tous les députés et efface les deux
   marqueurs. À utiliser en début de tour, après le retour des députés.
