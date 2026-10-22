@@ -13,11 +13,11 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', '
 
 title = ParagraphStyle('t', fontName='Times-Bold', fontSize=20, leading=24, textColor=RED, spaceAfter=4)
 sub = ParagraphStyle('s', fontName='Helvetica-Oblique', fontSize=8.5, textColor=black, spaceAfter=6)
-phase = ParagraphStyle('p', fontName='Times-Bold', fontSize=12.5, textColor=RED, spaceBefore=5, spaceAfter=4)
+phase = ParagraphStyle('p', fontName='Times-Bold', fontSize=12, textColor=RED, spaceBefore=3, spaceAfter=3)
 head = ParagraphStyle('h', fontName='Helvetica', fontSize=9, textColor=RED)
 step = ParagraphStyle('st', fontName='Helvetica', fontSize=9, textColor=BLUE, leading=11)
 tip = ParagraphStyle('tp', fontName='Helvetica', fontSize=7, textColor=BLUE, leading=8.5)
-body = ParagraphStyle('b', fontName='Helvetica', fontSize=8, leading=9.6)
+body = ParagraphStyle('b', fontName='Helvetica', fontSize=7.8, leading=9.2)
 rule = ParagraphStyle('r', fontName='Helvetica', fontSize=8, leading=10, textColor=black)
 
 W = A4[0] - 30 * mm
@@ -39,8 +39,8 @@ def section(name, rows):
         ('LINEBELOW', (0, 1), (-1, -1), 0.4, black),
         ('LINEBEFORE', (1, 0), (1, -1), 0.4, black),
         ('LINEBEFORE', (2, 0), (2, -1), 0.4, black),
-        ('TOPPADDING', (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 1.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     return [Paragraph(name, phase), t]
 
@@ -83,7 +83,10 @@ story += section('Action Phase', [
      '+2 per influential Personality in the region. Each Personality performs at most one action per turn.', '7.4'),
     ('8. Political Phase', None,
      'Check regime change and elections. Persuade deputies (Legislative, Thermidor, Directorate, '
-     'First Republic). King\'s action (Legislative). Propose and vote laws.', '7.5'),
+     'First Republic). King\'s action (Legislative). Propose and vote laws. Under the Terror or Wrath, '
+     'a 2nd rejected Government law lets the Marais install Thermidor at once: the step ends there. '
+     '<i>Open scenario: referendums at the start of this step; under the Directorate, limited coups '
+     'just before the Political Actions.</i>', '7.5, R.3.8.1, R.7.7.1'),
 ])
 story += section("Patriots' Phase", [
     ('9. Justice', None,
@@ -115,12 +118,18 @@ story += section('Interphase', [
      '50 / 150 / 100 by Coalition level. Government: returns all its money, then receives 2500 minus '
      'regions in revolt, Coalition-held or under a Catholic army (minimum 500).', '10.2'),
     ('16. Fame Adjustment', 'Then advance the Turn marker.',
-     'Objectives: +1 if achieved, -1 otherwise. Fled Personalities, placed on the Chronology track, '
-     'come back at the start of their turn.', '10.3'),
+     'Objectives: +1 if achieved, -1 otherwise. Apply pending event conditions (“unless ... before the end '
+     'of the turn”). Fled Personalities, placed on the Chronology track, come back at the start of their turn.',
+     '10.3'),
 ])
 
+story.append(Paragraph('End of the game', phase))
+story.append(Paragraph('After step 16 of turn 8, determine the winner (14.0). <i>Open scenario: a successful '
+                       'Royalist coup installing Vendémiaire ends the game at once with a Royalist victory '
+                       '(R.11).</i>', body))
+
 doc = SimpleDocTemplate(OUT, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
-                        topMargin=9 * mm, bottomMargin=8 * mm,
+                        topMargin=8 * mm, bottomMargin=7 * mm,
                         title='Sequence of Play', author='La patrie en danger - VASSAL module')
 doc.build(story)
 print(OUT)
